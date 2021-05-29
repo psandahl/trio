@@ -28,6 +28,8 @@ import math
 import numpy as np
 from scipy.linalg import svdvals
 
+from .math import normalize
+
 
 def matrix_ypr(ypr):
     """
@@ -60,6 +62,21 @@ def matrix_decompose_ypr(m):
                 math.atan2(m[2, 1], m[2, 2]))
     else:
         raise TypeError("m must be a 3x3 matrix")
+
+
+def matrix_look_at(eye, at, up):
+    """
+    Create a 3x3 rotation matrix relative to world coordinate system.
+    """
+    if type(eye) == np.ndarray and eye.size == 3 and \
+            type(at) == np.ndarray and at.size == 3 and \
+            type(up) == np.ndarray and up.size == 3:
+        front = normalize(at - eye)
+        side = normalize(np.cross(up, front))
+        up = np.cross(front, side)
+        return np.column_stack((front, side, up))
+    else:
+        raise TypeError("eye, at and up must be arrays with three components")
 
 
 def matrix_rank(m):

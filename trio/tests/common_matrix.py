@@ -2,7 +2,8 @@ import numpy as np
 import math
 import unittest
 
-from trio.common.matrix import matrix_rank, matrix_ypr, matrix_decompose_ypr
+from trio.common.matrix import matrix_rank, matrix_ypr, \
+    matrix_decompose_ypr, matrix_look_at
 
 
 def equal_matrices(m, n):
@@ -53,6 +54,28 @@ class CommonMatrixTestCase(unittest.TestCase):
         self.assertAlmostEqual(-87, random_d[0])
         self.assertAlmostEqual(13.2, random_d[1])
         self.assertAlmostEqual(37, random_d[2])
+
+    def test_matrix_look_at_decompose_ypr(self):
+        # Start with a matrix that shall have no rotation.
+        zero_m = matrix_look_at(np.array([0, 0, 0]),
+                                np.array([2, 0, 0]),
+                                np.array([0, 0, 1]))
+        self.assertEqual(3, matrix_rank(zero_m))
+
+        # It shall be equal to the identity matrix.
+        eye_m = np.eye(3, dtype=float)
+        self.assertTrue(equal_matrices(eye_m, zero_m))
+
+        # Continue with a random look at.
+        random_m = matrix_look_at(np.array([4, 3.3, 2.9]),
+                                  np.array([0, 0, 0]),
+                                  np.array([0, 0.6, 0.7]))
+        self.assertEqual(3, matrix_rank(random_m))
+
+        # Decompose and recreate with ypr - shall be equal matrices.
+        ypr = matrix_decompose_ypr(random_m)
+        ypr_m = matrix_ypr(np.array(ypr))
+        self.assertTrue(equal_matrices(random_m, ypr_m))
 
     def test_matrix_rank(self):
         # A matrix of zeros has rank zero.
