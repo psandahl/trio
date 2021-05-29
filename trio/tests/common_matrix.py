@@ -1,9 +1,11 @@
 import numpy as np
+import numpy.linalg as linalg
 import math
 import unittest
 
+from trio.common.math import normalize, column, euclidean, homogeneous
 from trio.common.matrix import matrix_rank, matrix_ypr, \
-    matrix_decompose_ypr, matrix_look_at
+    matrix_decompose_ypr, matrix_look_at, matrix_intrinsic
 
 
 def equal_matrices(m, n):
@@ -19,6 +21,16 @@ def equal_matrices(m, n):
         return False
 
     return True
+
+
+def normalized_camera_ray(fov):
+    """
+    Helper function to generate a normalized camera ray from angles.
+    """
+    x = math.tan(fov[0])
+    y = math.tan(fov[1])
+    z = 1.0
+    return normalize(np.array([x, y, z]))
 
 
 class CommonMatrixTestCase(unittest.TestCase):
@@ -76,6 +88,40 @@ class CommonMatrixTestCase(unittest.TestCase):
         ypr = matrix_decompose_ypr(random_m)
         ypr_m = matrix_ypr(np.array(ypr))
         self.assertTrue(equal_matrices(random_m, ypr_m))
+
+    def intrinsic_matrix(self, fov, rect):
+        i = matrix_intrinsic(fov, rect)
+        iInv = linalg.inv(i)
+
+        # Build test data for the image mid point and the four corners.
+        xs = [(np.array([0, 0]),
+               np.array([rect[0] + rect[2] / 2.0, rect[1] + rect[3] / 2.0])),
+              (np.array([-fov[0], -fov[1]]) / 2.0,
+               np.array([rect[0], rect[1]])),
+              (np.array([fov[0], -fov[1]]) / 2.0,
+               np.array([rect[0] + rect[2], rect[1]])),
+              (np.array([-fov[0], fov[1]]) / 2.0,
+               np.array([rect[0], rect[1] + rect[3]])),
+              (np.array([fov[0], fov[1]]) / 2.0,
+               np.array([rect[0] + rect[2], rect[1] + rect[3]]))
+              ]
+
+        for x in xs:
+            ray = normalized_camera_ray(x[0])
+            px = euclidean(i @ column(ray))
+            self.assertTrue(equal_matrices(column(x[1]), px))
+
+            # Test inversion.
+            ray2 = normalize(iInv @ homogeneous(px))
+            self.assertTrue(equal_matrices(column(ray), ray2))
+
+    def test_intrinsic_matrix(self):
+        # Test unit size image size.
+        self.intrinsic_matrix(np.radians((30, 20)),
+                              np.array([-0.5, -0.5, 1.0, 1.0]))
+        # Test ordinary image size type.
+        self.intrinsic_matrix(np.radians((30, 20)),
+                              np.array([0, 0, 720 - 1, 480 - 1]))
 
     def test_matrix_rank(self):
         # A matrix of zeros has rank zero.

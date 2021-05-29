@@ -28,7 +28,7 @@ import math
 import numpy as np
 from scipy.linalg import svdvals
 
-from .math import normalize
+from .math import normalize, focal_length
 
 
 def matrix_ypr(ypr):
@@ -77,6 +77,28 @@ def matrix_look_at(eye, at, up):
         return np.column_stack((front, side, up))
     else:
         raise TypeError("eye, at and up must be arrays with three components")
+
+
+def matrix_intrinsic(fov, rect):
+    """
+    Create a intrinsic matrix. fov is an array with two components, the
+    horizontal field of view and the vertical field of view. The rect is n array
+    with four components, the x start, the y start, the width and the height.
+    """
+    if type(fov) == np.ndarray and fov.size == 2 and \
+            type(rect) == np.ndarray and rect.size == 4:
+        fx = focal_length(fov[0], rect[2])
+        fy = focal_length(fov[1], rect[3])
+        cx = rect[0] + rect[2] / 2.0
+        cy = rect[1] + rect[3] / 2.0
+        m = [
+            fx, 0, cx,
+            0, fy, cy,
+            0, 0, 1
+        ]
+        return np.array(m).reshape(3, 3)
+    else:
+        raise TypeError("fov and rect must both be arrays")
 
 
 def matrix_rank(m):
