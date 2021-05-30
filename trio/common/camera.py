@@ -46,3 +46,12 @@ class Camera:
         Get the xyz coordinate mapped into the camera space.
         """
         return self.camera_matrix @ homogeneous(xyz)
+
+    def center_of_projection(self):
+        """
+        Get the camera's position in world coordinates.
+        """
+        r = self.camera_matrix[:, :3]
+        t = self.camera_matrix[:, 3:]
+
+        return (r.T @ (t * -1.0)).flatten()
