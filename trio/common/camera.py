@@ -38,6 +38,10 @@ class Camera:
             # Put together camera matrix.
             self.camera_matrix = np.hstack((r.T, t))
 
+            # Create intrinsic matrix and put together the projection matrix.
+            i = matrix_intrinsic(fov, rect)
+            self.projection_matrix = i @ self.camera_matrix
+
         else:
             raise TypeError("Not the expected types to Camera")
 
@@ -55,3 +59,9 @@ class Camera:
         t = self.camera_matrix[:, 3:]
 
         return (r.T @ (t * -1.0)).flatten()
+
+    def project(self, xyz):
+        """
+        Project the xyz coordinate into image space.
+        """
+        return euclidean(self.projection_matrix @ homogeneous(xyz))

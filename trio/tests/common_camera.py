@@ -1,4 +1,5 @@
 import numpy as np
+import math
 import unittest
 
 from trio.common.camera import Camera
@@ -46,3 +47,30 @@ class CommonCameraTestCase(unittest.TestCase):
 
         self.assertTrue(equal_arrays(np.array([1899.8, 3678, -8765.5]),
                                      c.center_of_projection()))
+
+    def test_camera_project(self):
+        # Create a simple camera with unit image.
+        fov = math.atan2(1, 3) * 2.0  # Fov for simple capture of image limits
+        c = Camera(np.array([3, 3, 0]),
+                   np.radians((-90, 0, 0)),
+                   np.array([fov, fov]))
+
+        # Looking ahead shall be mid image.
+        self.assertTrue(equal_arrays(np.array([0, 0]),
+                                     c.project(np.array([3, 0, 0]))))
+
+        # Upper left.
+        self.assertTrue(equal_arrays(np.array([-0.5, -0.5]),
+                                     c.project(np.array([4, 0, 1]))))
+
+        # Upper right.
+        self.assertTrue(equal_arrays(np.array([0.5, -0.5]),
+                                     c.project(np.array([2, 0, 1]))))
+
+        # Lower left.
+        self.assertTrue(equal_arrays(np.array([-0.5, 0.5]),
+                                     c.project(np.array([4, 0, -1]))))
+
+        # Lower right.
+        self.assertTrue(equal_arrays(np.array([0.5, 0.5]),
+                                     c.project(np.array([2, 0, -1]))))
