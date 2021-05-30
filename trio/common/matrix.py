@@ -23,7 +23,6 @@
 #
 # I.e. the Z axis is the direction for the camera, X is to the right,
 # and Y is down.
-
 import math
 import numpy as np
 from scipy.linalg import svdvals
@@ -99,6 +98,15 @@ def matrix_intrinsic(fov, rect):
         return np.array(m).reshape(3, 3)
     else:
         raise TypeError("fov and rect must both be arrays")
+
+
+def matrix_permute_ecef():
+    """
+    Create a permutation matrix that transforms from ecef to camera axes.
+    """
+    return np.array([0.0,  0.0, 1.0,
+                     -1.0, 0.0, 0.0,
+                     0.0, -1.0, 0.0]).reshape(3, 3)
 
 
 def matrix_rank(m):
