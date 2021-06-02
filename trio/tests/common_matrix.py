@@ -3,11 +3,13 @@ import numpy.linalg as linalg
 import math
 import unittest
 
+from trio.common.camera import Camera
 from trio.common.math import normalize, column, euclidean, homogeneous
 from trio.common.matrix import matrix_rank, matrix_ypr, \
-    matrix_decompose_ypr, matrix_look_at, matrix_intrinsic
+    matrix_decompose_ypr, matrix_look_at, matrix_intrinsic, \
+    matrix_permute_ecef, matrix_decompose_projection
 
-from .utils import equal_matrices
+from .utils import equal_matrices, equal_arrays
 
 
 def normalized_camera_ray(fov):
@@ -109,6 +111,25 @@ class CommonMatrixTestCase(unittest.TestCase):
         # Test ordinary image size type.
         self.intrinsic_matrix(np.radians((30, 20)),
                               np.array([0, 0, 720 - 1, 480 - 1]))
+
+    def test_matric_decompose_projection(self):
+        # Create some random camera position.
+        c = Camera(np.array([1899.8, 3678, -8765.5]),
+                   np.radians((-90, 33, 4)),
+                   np.radians((30, 20)))
+
+        intrinsic = matrix_intrinsic(np.radians((30, 20)),
+                                     np.array([-0.5, -0.5, 1.0, 1.0]))
+        permute = matrix_permute_ecef()
+
+        decomp = matrix_decompose_projection(c.projection_matrix,
+                                             intrinsic, permute)
+
+        # Compare.
+        self.assertTrue(equal_arrays(np.radians((-90, 33, 4)),
+                                     np.array(decomp[0])))
+        self.assertTrue(equal_arrays(np.array([1899.8, 3678, -8765.5]),
+                                     decomp[1]))
 
     def test_matrix_rank(self):
         # A matrix of zeros has rank zero.

@@ -25,6 +25,7 @@
 # and Y is down.
 import math
 import numpy as np
+from scipy import linalg
 from scipy.linalg import svdvals
 
 from .math import normalize, focal_length
@@ -107,6 +108,33 @@ def matrix_permute_ecef():
     return np.array([0.0,  0.0, 1.0,
                      -1.0, 0.0, 0.0,
                      0.0, -1.0, 0.0]).reshape(3, 3)
+
+
+def matrix_decompose_projection(projection, intrinsic, permute):
+    """
+    Given instrinsic and permute matrices decompose projection matrix
+    into ypr angles and translation.
+    """
+    if type(projection) == np.ndarray and projection.shape == (3, 4) and \
+            type(intrinsic) == np.ndarray and intrinsic.shape == (3, 3) and \
+            type(permute) == np.ndarray and permute.shape == (3, 3):
+
+        # Step one: remove intrinsic from projection to get camera matrix.
+        camera_matrix = linalg.inv(intrinsic) @ projection
+
+        # Step two: split camera matrix into rotation and translation.
+        r = camera_matrix[:, :3]
+        r = r.T
+
+        t = camera_matrix[:, 3:]
+        t = r @ (t * -1.0)
+
+        # Step three: adjust rotation and decompose into ypr.
+        r = r @ permute.T
+
+        return (matrix_decompose_ypr(r), t.flatten())
+    else:
+        raise TypeError("Matrices are not the expected types")
 
 
 def matrix_rank(m):
