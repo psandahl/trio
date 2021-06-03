@@ -2,7 +2,8 @@ from enum import Enum
 import numpy as np
 
 from .math import column, euclidean, homogeneous
-from .matrix import matrix_ypr, matrix_intrinsic, matrix_permute_ecef
+from .matrix import matrix_ypr, matrix_intrinsic, matrix_permute_ecef, \
+    matrix_permute_ned
 
 
 class Permutation(Enum):
@@ -10,6 +11,7 @@ class Permutation(Enum):
     Enumeration of the different permuations.
     """
     ECEF = 1
+    NED = 2
 
 
 class Camera:
@@ -26,8 +28,9 @@ class Camera:
                 type(rect) == np.ndarray and rect.size == 4 and \
                 type(perm) == Permutation:
 
-            # Only ECEF atm.
             permute = matrix_permute_ecef()
+            if perm == Permutation.NED:
+                permute = matrix_permute_ned()
 
             # Create rotation matrix.
             r = matrix_ypr(orientation) @ permute

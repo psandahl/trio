@@ -110,6 +110,15 @@ def matrix_permute_ecef():
                      0.0, -1.0, 0.0]).reshape(3, 3)
 
 
+def matrix_permute_ned():
+    """
+    Create a permutation matrix that transforms from ned to camera axes.
+    """
+    return np.array([0.0, 0.0, 1.0,
+                     1.0, 0.0, 0.0,
+                     0.0, 1.0, 0.0]).reshape(3, 3)
+
+
 def matrix_decompose_projection(projection, intrinsic, permute):
     """
     Given instrinsic and permute matrices decompose projection matrix
