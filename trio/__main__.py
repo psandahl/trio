@@ -35,6 +35,40 @@ def camera_from_image(image, width, height):
     return c
 
 
+def calc_depth_image(tb, aoi):
+    xstart = aoi[0]
+    ystart = aoi[1]
+    width = aoi[2]
+    height = aoi[3]
+
+    d = np.zeros((height, width), dtype=np.float)
+
+    c0 = tb.oldest_camera()
+    c1 = tb.newest_camera()
+
+    for row in range(height):
+        for col in range(width):
+            uv = (float(xstart + col), float(ystart + row))
+            uv2 = tb.track(uv)
+
+            xyz = triangulate(c0.projection_matrix, np.array(uv),
+                              c1.projection_matrix, np.array(uv2))
+
+            zC = c0.camera_space(xyz)[2]
+            d[row, col] = zC
+
+    min_val = np.min(d)
+    max_val = np.max(d)
+    val_range = max_val - min_val
+
+    for row in range(height):
+        for col in range(width):
+            zC = d[row, col]
+            d[row, col] = (zC - min_val) / val_range
+
+    return d
+
+
 def run_app2():
     f = open("/home/patrik/test-data/test-meta.json")
     meta = json.load(f)
@@ -46,6 +80,7 @@ def run_app2():
         exit()
 
     cv.namedWindow("Player")
+    cv.namedWindow("Depth AOI")
 
     # Create the tracking buffer.
     tb = TrackingBuffer()
@@ -69,25 +104,31 @@ def run_app2():
         tb.add_image(frame, cam)
 
         if tb.has_content():
-            uv = ((frame.shape[1] - 1) / 2.0, (frame.shape[0] - 1) / 2.0)
-            uv2 = tb.track(uv)
+            #aoi = (580, 250, 250, 180)
+            aoi = (880, 340, 250, 180)
+
+            #uv = ((frame.shape[1] - 1) / 2.0, (frame.shape[0] - 1) / 2.0)
+            #uv2 = tb.track(uv)
 
             image = np.array(tb.oldest_image())
 
-            c0 = tb.oldest_camera()
-            c1 = tb.newest_camera()
+            #c0 = tb.oldest_camera()
+            #c1 = tb.newest_camera()
 
-            xyz = triangulate(c0.projection_matrix, np.array(uv),
-                              c1.projection_matrix, np.array(uv2))
+            # xyz = triangulate(c0.projection_matrix, np.array(uv),
+            #                  c1.projection_matrix, np.array(uv2))
 
-            print(xyz)
-            C = c0.camera_space(xyz)
-            print("Depth: %.3f" % C[2])
+            # print(xyz)
+            #C = c0.camera_space(xyz)
+            #print("Depth: %.3f" % C[2])
 
-            cv.drawMarker(image, uv_to_int(uv), (0, 255, 0))
-            cv.drawMarker(image, uv_to_int(uv2), (0, 0, 255))
+            #cv.drawMarker(image, uv_to_int(uv), (0, 255, 0))
+            #cv.drawMarker(image, uv_to_int(uv2), (0, 0, 255))
+
+            cv.rectangle(image, aoi, (0, 0, 255))
 
             cv.imshow("Player", image)
+            cv.imshow("Depth AOI", calc_depth_image(tb, aoi))
         else:
             cv.imshow("Player", frame)
 
@@ -98,6 +139,8 @@ def run_app2():
         #    cv.drawMarker(frame, px, (255, 0, 0))
 
         #cv.imshow("Player", frame)
+
+        print("Frame=%d" % frame_count)
 
         key = cv.waitKey(0)
         if key == 27 or key == ord('q'):
