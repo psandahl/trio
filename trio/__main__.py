@@ -65,6 +65,8 @@ def calc_depth_image(tb, aoi):
         for col in range(width):
             zC = d[row, col]
             d[row, col] = (zC - min_val) / val_range
+            # print("min: %.2f max: %.2f range: %.2f z: %.2f zn: %.2f" %
+            #      (min_val, max_val, val_range, zC, d[row, col]))
 
     return d
 
@@ -86,6 +88,7 @@ def run_app2():
     tb = TrackingBuffer()
 
     frame_count = 0
+
     while True:
         ret, frame = eager_read(cap)
 
@@ -103,42 +106,27 @@ def run_app2():
         # Add image + camera.
         tb.add_image(frame, cam)
 
-        if tb.has_content():
-            #aoi = (580, 250, 250, 180)
-            aoi = (880, 340, 250, 180)
+        #aoi = (580, 250, 250, 180)
+        aoi = (920, 370, 150, 150)
 
-            #uv = ((frame.shape[1] - 1) / 2.0, (frame.shape[0] - 1) / 2.0)
-            #uv2 = tb.track(uv)
+        #uv = ((frame.shape[1] - 1) / 2.0, (frame.shape[0] - 1) / 2.0)
+        #uv2 = tb.track(uv)
 
-            image = np.array(tb.oldest_image())
+        image = np.array(tb.oldest_image())
 
-            #c0 = tb.oldest_camera()
-            #c1 = tb.newest_camera()
+        cv.rectangle(image, aoi, (0, 0, 255))
 
-            # xyz = triangulate(c0.projection_matrix, np.array(uv),
-            #                  c1.projection_matrix, np.array(uv2))
-
-            # print(xyz)
-            #C = c0.camera_space(xyz)
-            #print("Depth: %.3f" % C[2])
-
-            #cv.drawMarker(image, uv_to_int(uv), (0, 255, 0))
-            #cv.drawMarker(image, uv_to_int(uv2), (0, 0, 255))
-
-            cv.rectangle(image, aoi, (0, 0, 255))
-
-            cv.imshow("Player", image)
-            cv.imshow("Depth AOI", calc_depth_image(tb, aoi))
-        else:
-            cv.imshow("Player", frame)
+        cv.imshow("Player", image)
+        depth_image = calc_depth_image(tb, aoi)
+        cv.imshow("Depth AOI", depth_image)
+        # else:
+        #    cv.imshow("Player", frame)
 
         # Some reprojection tests.
         # for corr in images[frame_count]["point-correspondences"]:
         #    px = uv_to_int(cam.project(np.array([corr["x"],
         #                                         corr["y"], corr["z"]])))
         #    cv.drawMarker(frame, px, (255, 0, 0))
-
-        #cv.imshow("Player", frame)
 
         print("Frame=%d" % frame_count)
 
