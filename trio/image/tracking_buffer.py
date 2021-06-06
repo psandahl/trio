@@ -9,18 +9,20 @@ class TrackingBuffer:
     gray_images = []
     flow_images = []
     cameras = []
+    projections = []
     width = 20  # Must be at least 2
 
     def __init__(self):
         return
 
-    def add_image(self, image, camera):
+    def add_image(self, image, camera, projection):
         # Clean oldest data.
         if len(self.orig_images) == self.width:
             self.orig_images.pop(0)
             self.gray_images.pop(0)
             self.flow_images.pop(0)
             self.cameras.pop(0)
+            self.projections.pop(0)
 
         # Gray convert the image.
         gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
@@ -28,6 +30,7 @@ class TrackingBuffer:
         self.orig_images.append(image)
         self.gray_images.append(gray)
         self.cameras.append(camera)
+        self.projections.append(projection)
 
         gs = len(self.gray_images)
         if gs >= 2:
@@ -50,6 +53,12 @@ class TrackingBuffer:
 
     def newest_camera(self):
         return self.cameras[len(self.cameras) - 1]
+
+    def oldest_projection(self):
+        return self.projections[0]
+
+    def newest_projection(self):
+        return self.projections[len(self.projections) - 1]
 
     def track(self, px):
         if len(self.flow_images) == 0:

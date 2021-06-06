@@ -4,7 +4,7 @@ import cv2 as cv
 import json
 
 from .common.camera import Camera, Permutation
-from .common.linear import triangulate
+from .common.linear import triangulate, solve_dlt
 from .image.tracking_buffer import TrackingBuffer
 
 
@@ -35,6 +35,19 @@ def camera_from_image(image, width, height):
     return c
 
 
+def projection_from_image(image, width, height):
+    points = image["point-correspondences"]
+    for point in points:
+        point["u"] = (point["u"] + 0.5) * float(width - 1)
+        point["v"] = (point["v"] + 0.5) * float(height - 1)
+
+    res, p = solve_dlt(points)
+    if not res:
+        print("Failed to perform DLT")
+
+    return p
+
+
 def calc_depth_image(tb, aoi):
     xstart = aoi[0]
     ystart = aoi[1]
@@ -43,18 +56,19 @@ def calc_depth_image(tb, aoi):
 
     d = np.zeros((height, width), dtype=np.float)
 
-    c0 = tb.oldest_camera()
-    c1 = tb.newest_camera()
+    p0 = tb.oldest_projection()
+    p1 = tb.newest_projection()
+    c = tb.oldest_camera()
 
     for row in range(height):
         for col in range(width):
             uv = (float(xstart + col), float(ystart + row))
             uv2 = tb.track(uv)
 
-            xyz = triangulate(c0.projection_matrix, np.array(uv),
-                              c1.projection_matrix, np.array(uv2))
+            xyz = triangulate(p0, np.array(uv),
+                              p1, np.array(uv2))
 
-            zC = c0.camera_space(xyz)[2]
+            zC = c.camera_space(xyz)[2]
             d[row, col] = zC
 
     min_val = np.min(d)
@@ -103,8 +117,16 @@ def run_app2():
         cam = camera_from_image(images[frame_count],
                                 frame.shape[1] - 1, frame.shape[0] - 1)
 
-        # Add image + camera.
-        tb.add_image(frame, cam)
+        # Get projection matrix from image metadata.
+        p = projection_from_image(images[frame_count],
+                                  frame.shape[1] - 1, frame.shape[0] - 1)
+
+        # print(cam.projection_matrix)
+        # print("--")
+        # print(p)
+
+        # Add image + projection.
+        tb.add_image(frame, cam, p)
 
         #aoi = (580, 250, 250, 180)
         aoi = (920, 370, 150, 150)
