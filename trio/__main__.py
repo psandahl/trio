@@ -1,10 +1,14 @@
 import numpy as np
 import cv2 as cv
+import scipy.linalg as linalg
 
 import json
 
 from .common.camera import Camera, Permutation
 from .common.linear import triangulate, solve_dlt
+from .common.math import euclidean, homogeneous
+from .common.matrix import matrix_intrinsic, matrix_decompose_projection, \
+    matrix_permute_ned
 from .image.tracking_buffer import TrackingBuffer
 
 
@@ -45,7 +49,12 @@ def projection_from_image(image, width, height):
     if not res:
         print("Failed to perform DLT")
 
-    return p
+    params = image["camera-parameters"]
+    intr = matrix_intrinsic(np.radians((params["horizontal-fov"],
+                                        params["vertical-fov"])),
+                            np.array([0.0, 0.0, width, height]))
+
+    return (p, linalg.inv(intr) @ p)
 
 
 def calc_depth_image(tb, aoi):
@@ -68,8 +77,9 @@ def calc_depth_image(tb, aoi):
             xyz = triangulate(p0, np.array(uv),
                               p1, np.array(uv2))
 
-            zC = c.camera_space(xyz)[2]
-            d[row, col] = zC
+            C = (c @ homogeneous(xyz)).flatten()
+
+            d[row, col] = C[2]
 
     min_val = np.min(d)
     max_val = np.max(d)
@@ -118,21 +128,21 @@ def run_app2():
                                 frame.shape[1] - 1, frame.shape[0] - 1)
 
         # Get projection matrix from image metadata.
-        p = projection_from_image(images[frame_count],
-                                  frame.shape[1] - 1, frame.shape[0] - 1)
+        (p, c) = projection_from_image(images[frame_count],
+                                       frame.shape[1] - 1, frame.shape[0] - 1)
 
         # print(cam.projection_matrix)
         # print("--")
         # print(p)
 
         # Add image + projection.
-        tb.add_image(frame, cam, p)
+        tb.add_image(frame, c, p)
 
-        #aoi = (580, 250, 250, 180)
+        #aoi = (580, 150, 250, 280)
         aoi = (920, 370, 150, 150)
 
-        #uv = ((frame.shape[1] - 1) / 2.0, (frame.shape[0] - 1) / 2.0)
-        #uv2 = tb.track(uv)
+        # uv = ((frame.shape[1] - 1) / 2.0, (frame.shape[0] - 1) / 2.0)
+        # uv2 = tb.track(uv)
 
         image = np.array(tb.oldest_image())
 

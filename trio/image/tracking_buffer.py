@@ -10,7 +10,7 @@ class TrackingBuffer:
     flow_images = []
     cameras = []
     projections = []
-    width = 20  # Must be at least 2
+    width = 3  # Must be at least 2
 
     def __init__(self):
         return
@@ -36,7 +36,7 @@ class TrackingBuffer:
         if gs >= 2:
             flow = cv.calcOpticalFlowFarneback(self.gray_images[gs - 2],
                                                self.gray_images[gs - 1],
-                                               None, 0.5, 3, 15, 3, 5, 1.2, 0)
+                                               None, 0.5, 4, 15, 3, 5, 1.2, 0)
             self.flow_images.append(flow)
 
     def has_content(self):
