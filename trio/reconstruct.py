@@ -6,12 +6,13 @@ import scipy.optimize as opt
 
 import functools
 import json
+import math
 
 from .common.camera import Camera, Permutation
 from .common.linear import solve_dlt
 from .common.math import euclidean, homogeneous
 from .common.matrix import matrix_intrinsic, matrix_permute_ned, \
-    matrix_decompose_projection
+    matrix_decompose_projection, matrix_ypr, matrix_decompose_ypr
 
 
 def obj_from_file(path):
@@ -97,6 +98,75 @@ def minimize_all(points, position, orientation, fov):
         position=x[0:3], orientation=x[3:6], fov=x[6:8]), x0, method='lm')
 
     return (res.x[0:3], res.x[3:6], res.x[6:8])
+
+
+def run2(path):
+    images = obj_from_file(path)["images"]
+    for image in images:
+        if image["confidence"] > 0.99:
+            print("Image id: %d" % image["image-id"])
+            print("confidence: %.5f" % image["confidence"])
+
+            params = image["camera-parameters"]
+
+            print("Camera params:\n%s" % params)
+
+            position0 = np.array((params["x"], params["y"], params["z"]))
+            orientation0 = np.array(
+                (params["yaw"], params["pitch"], params["roll"]))
+            fov0 = np.array((params["horizontal-fov"], params["vertical-fov"]))
+
+            cam0 = Camera(position0, np.radians(orientation0), np.radians(fov0),
+                          rect=np.array([-0.5, -0.5, 1.0, 1.0]),
+                          perm=Permutation.NED)
+            intrinsic, permute = intrinsic_and_permute(params)
+
+            cam0_ypr, cam0_t = matrix_decompose_projection(
+                cam0.projection_matrix, intrinsic, permute)
+
+            cam0_r = (matrix_ypr(np.array(cam0_ypr)) @ permute).T
+
+            print("Cam0 y: %f, p: %f, r: %f" % (math.degrees(
+                cam0_ypr[0]), math.degrees(cam0_ypr[1]), math.degrees(cam0_ypr[2])))
+            print("Cam0 t: %s" % cam0_t)
+            print("Cam0 r:\n%s" % cam0_r)
+
+            print("Cam0 camera matrix:\n%s" % cam0.camera_matrix)
+
+            print("===")
+
+            points = image["point-correspondences"]
+            obj_points = []
+            img_points = []
+            for point in points:
+                obj_points.append((point["x"], point["y"], point["z"]))
+                img_points.append((point["u"], point["v"]))
+
+            # Solve EPNP
+            ret, rvec, tvec = cv.solvePnP(np.array(obj_points), np.array(img_points),
+                                          intrinsic, np.array([]),
+                                          np.array([]), np.array([]),
+                                          useExtrinsicGuess=False,
+                                          flags=cv.SOLVEPNP_EPNP)
+
+            print("Solve EPNP")
+            print("tvec: %s" % tvec)
+            rr, j = cv.Rodrigues(rvec)
+            print("r:\n%s" % rr)
+
+            # Solve SQPNP
+            ret, rvec, tvec = cv.solvePnP(np.array(obj_points), np.array(img_points),
+                                          intrinsic, np.array([]),
+                                          np.array([]), np.array([]),
+                                          useExtrinsicGuess=False,
+                                          flags=cv.SOLVEPNP_SQPNP)
+
+            print("Solve SQPNP")
+            print("tvec: %s" % tvec)
+            rr, j = cv.Rodrigues(rvec)
+            print("r:\n%s" % rr)
+
+            input("Press ENTER to continue")
 
 
 def run(path):
