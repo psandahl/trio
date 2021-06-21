@@ -1,9 +1,11 @@
+import cv2 as cv
 import numpy as np
 import math
 from scipy import linalg
 
-from .camera import Camera
+from .camera import Permutation
 from .math import euclidean
+from .matrix import matrix_decompose_camera
 
 
 def triangulate(p0, uv0, p1, uv1):
@@ -83,3 +85,28 @@ def solve_dlt(points):
         return (True, p)
     else:
         raise TypeError("Not the expected types or length for solve_dlt")
+
+
+def solve_pose_epnp(points, intrinsic, permute):
+    """
+    Solve a pose from points to ypr and translation.
+    """
+    obj_points = []
+    img_points = []
+    for point in points:
+        obj_points.append(np.array((point["x"], point["y"], point["z"])))
+        img_points.append(np.array((point["u"], point["v"])))
+
+    ret, rvec, tvec = cv.solvePnP(np.array(obj_points), np.array(img_points),
+                                  intrinsic, np.array([]),
+                                  np.array([]), np.array([]),
+                                  useExtrinsicGuess=False,
+                                  flags=cv.SOLVEPNP_EPNP)
+
+    if ret:
+        r, j = cv.Rodrigues(rvec)
+        camera_matrix = np.hstack([r, tvec])
+        ypr, t = matrix_decompose_camera(camera_matrix, permute)
+        return (True, ypr, t)
+    else:
+        return (False, None, None)

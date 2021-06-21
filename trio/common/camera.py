@@ -1,5 +1,6 @@
 from enum import Enum
 import numpy as np
+from scipy import linalg
 
 from .math import column, euclidean, homogeneous
 from .matrix import matrix_ypr, matrix_intrinsic, matrix_permute_ecef, \
@@ -68,3 +69,29 @@ class Camera:
         Project the xyz coordinate into image space.
         """
         return euclidean(self.projection_matrix @ homogeneous(xyz))
+
+
+def camera_from_param(param, rect=np.array([-0.5, -0.5, 1.0, 1.0]),
+                      perm=Permutation.ECEF):
+    """
+    Create a camera from parameters.
+    """
+    position = np.array((param["x"], param["y"], param["z"]))
+    orientation = np.array((param["yaw"], param["pitch"], param["roll"]))
+    fov = np.array((param["horizontal-fov"], param["vertical-fov"]))
+    return Camera(position, np.radians(orientation), np.radians(fov), rect, perm)
+
+
+def camera_reprojection_errors(points, camera):
+    """
+    Reproject the 3d points through the camera and return the reprojection
+    errors.
+    """
+    err = []
+    for point in points:
+        xyz = np.array((point["x"], point["y"], point["z"]))
+        uv0 = np.array((point["u"], point["v"]))
+        uv1 = camera.project(xyz)
+        err.append(linalg.norm(uv1 - uv0))
+
+    return err
