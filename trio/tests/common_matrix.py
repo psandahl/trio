@@ -7,7 +7,7 @@ from trio.common.camera import Camera
 from trio.common.math import normalize, column, euclidean, homogeneous
 from trio.common.matrix import matrix_rank, matrix_ypr, \
     matrix_decompose_ypr, matrix_look_at, matrix_intrinsic, \
-    matrix_permute_ecef, matrix_decompose_projection
+    matrix_permute_ecef, matrix_decompose_camera, matrix_decompose_projection
 
 from .utils import equal_matrices, equal_arrays
 
@@ -112,7 +112,23 @@ class CommonMatrixTestCase(unittest.TestCase):
         self.intrinsic_matrix(np.radians((30, 20)),
                               np.array([0, 0, 720 - 1, 480 - 1]))
 
-    def test_matric_decompose_projection(self):
+    def test_matrix_decompose_camera(self):
+        # Create some random camera position.
+        c = Camera(np.array([1899.8, 3678, -8765.5]),
+                   np.radians((-90, 33, 4)),
+                   np.radians((30, 20)))
+
+        permute = matrix_permute_ecef()
+
+        decomp = matrix_decompose_camera(c.camera_matrix, permute)
+
+        # Compare.
+        self.assertTrue(equal_arrays(np.radians((-90, 33, 4)),
+                                     np.array(decomp[0])))
+        self.assertTrue(equal_arrays(np.array([1899.8, 3678, -8765.5]),
+                                     decomp[1]))
+
+    def test_matrix_decompose_projection(self):
         # Create some random camera position.
         c = Camera(np.array([1899.8, 3678, -8765.5]),
                    np.radians((-90, 33, 4)),

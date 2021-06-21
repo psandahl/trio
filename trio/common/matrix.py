@@ -119,6 +119,27 @@ def matrix_permute_ned():
                      0.0, 1.0, 0.0]).reshape(3, 3)
 
 
+def matrix_decompose_camera(camera, permute):
+    """
+    Given camera and permute matrices decompose into ypr angles and translation.
+    """
+    if type(camera) == np.ndarray and camera.shape == (3, 4) and \
+            type(permute) == np.ndarray and permute.shape == (3, 3):
+        # Split camera matrix into rotation and translation.
+        r = camera[:, :3]
+        r = r.T
+
+        t = camera[:, 3:]
+        t = r @ (t * -1.0)
+
+        # Adjust rotation and decompose into ypr.
+        r = r @ permute.T
+
+        return (matrix_decompose_ypr(r), t.flatten())
+    else:
+        raise TypeError("Matrices are not the expected types")
+
+
 def matrix_decompose_projection(projection, intrinsic, permute):
     """
     Given instrinsic and permute matrices decompose projection matrix
@@ -128,20 +149,8 @@ def matrix_decompose_projection(projection, intrinsic, permute):
             type(intrinsic) == np.ndarray and intrinsic.shape == (3, 3) and \
             type(permute) == np.ndarray and permute.shape == (3, 3):
 
-        # Step one: remove intrinsic from projection to get camera matrix.
-        camera_matrix = linalg.inv(intrinsic) @ projection
-
-        # Step two: split camera matrix into rotation and translation.
-        r = camera_matrix[:, :3]
-        r = r.T
-
-        t = camera_matrix[:, 3:]
-        t = r @ (t * -1.0)
-
-        # Step three: adjust rotation and decompose into ypr.
-        r = r @ permute.T
-
-        return (matrix_decompose_ypr(r), t.flatten())
+        # Remove the instrinsic matrix and decompose camera part.
+        return matrix_decompose_camera(linalg.inv(intrinsic) @ projection, permute)
     else:
         raise TypeError("Matrices are not the expected types")
 
