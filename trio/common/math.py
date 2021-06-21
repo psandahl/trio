@@ -1,4 +1,5 @@
 # Common math helper functions.
+from functools import reduce
 import numpy as np
 import numpy.linalg as linalg
 import math
@@ -50,3 +51,17 @@ def homogeneous(v, w=1.0):
         return column(np.append(v, w))
     else:
         raise TypeError("v must be 1D array or column vector")
+
+
+def ssd(xs):
+    """
+    Square and sum the values.
+    """
+    return reduce(lambda acc, x: acc + x**2, xs, 0.0)
+
+
+def sad(xs):
+    """
+    Sum the absolute of the values.
+    """
+    return reduce(lambda acc, x: acc + abs(x), xs, 0.0)
