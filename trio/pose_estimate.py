@@ -31,7 +31,7 @@ def equal_angles(yaw0, yaw1, pitch0, pitch1, roll0, roll1):
 
 
 def angles_distance(yaw0, yaw1, pitch0, pitch1, roll0, roll1):
-    return (yaw1 - yaw0, pitch1 - pitch1, roll1 - roll0)
+    return (yaw1 - yaw0, pitch1 - pitch0, roll1 - roll0)
 
 
 def position_distance(pos0, param):
@@ -56,6 +56,14 @@ def optimize_fov(points, position, orientation, fov):
     return res.x
 
 
+def optimize_position(points, position, orientation, fov):
+    obj = functools.partial(obj_f, points,
+                            orientation=orientation, fov=fov)
+    res = optimize.least_squares(
+        lambda x: obj(position=x), position, method='lm')
+    return res.x
+
+
 def ok_str(cond):
     if cond:
         return "OK"
@@ -64,18 +72,23 @@ def ok_str(cond):
 
 
 def compare_image(image, fov_error):
+    fov_err_scale = 1.2
+
     image_id = image["image-id"]
     param = image["camera-parameters"]
     points = image["point-correspondences"]
 
     fov = np.radians((param["horizontal-fov"], param["vertical-fov"]))
+    if fov_error:
+        fov *= fov_err_scale
 
     # Start by solving for pose.
     intrinsic, permute = intrinsic_and_permute(fov)
     ret, ypr, t = solve_pose_epnp(points, intrinsic, permute)
     if ret:
         print("===")
-        print("Processing frame id: %d" % image_id)
+        print("Processing frame id: %d - confidence %.3f" %
+              (image_id, image["confidence"]))
 
         # Convert solved rotation to degrees.
         yaw, pitch, roll = (math.degrees(ypr[0]),
@@ -107,17 +120,24 @@ def compare_image(image, fov_error):
         print(" Pose reconstructed camera error (SAD): %.12f" % camera0_err)
 
         if fov_error:
-            fov_err = np.radians((param["horizontal-fov"] * 1.09,
-                                  param["vertical-fov"] * .99))
-            intrinsic, permute = intrinsic_and_permute(fov_err)
-            ret, ypr, t = solve_pose_epnp(points, intrinsic, permute)
+            # Try to search for better fov - but use position from metadata.
+            print(" Try solve stuff to compensate for incorrect fov")
 
-            camera1_err = sad(obj_f(points, t, np.array(ypr), fov_err))
+            position = np.array((param["x"], param["y"], param["z"]))
+            opt_fov = np.degrees(optimize_fov(points, position,
+                                              np.array(ypr), fov))
 
-            print("fov: %s" % np.degrees(fov))
-            print("fov_err: %s" % np.degrees(fov_err))
-            print("fov_min: %s" % np.degrees(
-                optimize_fov(points, t, np.array(ypr), fov_err)))
+            print("  Adjust horizontal fov from %.5f to %.5f (should be %.5f)" %
+                  (np.degrees(fov[0]), opt_fov[0], param["horizontal-fov"]))
+            print("  Adjust vertical fov from %.5f to %.5f (should be %.5f)" %
+                  (np.degrees(fov[1]), opt_fov[1], param["vertical-fov"]))
+
+            # With new fov, try search for better position.
+            opt_fov = np.radians(opt_fov)
+            opt_position = optimize_position(points, t, np.array(ypr), opt_fov)
+
+            print("  Adjust position err from distance %.5fm to %.5fm" %
+                  (linalg.norm(t - position), linalg.norm(opt_position - position)))
 
     else:
         print("Failed to solve pose for frame id: %d" % image_id)
