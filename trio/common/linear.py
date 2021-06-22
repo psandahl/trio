@@ -100,7 +100,6 @@ def solve_pose_epnp(points, intrinsic, permute):
     ret, rvec, tvec = cv.solvePnP(np.array(obj_points), np.array(img_points),
                                   intrinsic, np.array([]),
                                   np.array([]), np.array([]),
-                                  useExtrinsicGuess=False,
                                   flags=cv.SOLVEPNP_EPNP)
 
     if ret:

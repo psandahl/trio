@@ -62,8 +62,6 @@ def compare_image(image):
         ref_camera = camera_from_param(param, rect=np.array([-0.5, -0.5, 1.0, 1.0]),
                                        perm=Permutation.NED)
         ref_camera_err = sad(camera_reprojection_errors(points, ref_camera))
-        print("Ref camera id: %d - reprojection error: %.8f" %
-              (image_id, ref_camera_err))
 
         # Camera from the solved pose.
         camera0 = Camera(t, np.array(ypr),
@@ -72,8 +70,9 @@ def compare_image(image):
                          rect=np.array([-0.5, -0.5, 1.0, 1.0]),
                          perm=Permutation.NED)
         camera0_err = sad(camera_reprojection_errors(points, camera0))
-        print("Camera 0 id: %d - reprojection error: %.8f" %
-              (image_id, camera0_err))
+        if camera0_err > ref_camera_err:
+            print("Camera0 reprojection_error > ref camera for frame id: %s" %
+                  image_id)
     else:
         print("Failed to solve pose for frame id: %d" % image_id)
 
