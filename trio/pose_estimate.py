@@ -44,8 +44,12 @@ def obj_f(points, position=np.array([]), orientation=np.array([]), fov=np.array(
     camera = camera_from_parts(position, orientation, fov)
     return camera_reprojection_errors(points, camera)
 
-    # def optimize_fov(position, orientation, fov):
-    #    f = functools.partial(camera_from_keywords, )
+
+def optimize_fov(points, position, orientation, fov):
+    obj = functools.partial(obj_f, points, position=position,
+                            orientation=orientation)
+    res = optimize.least_squares(lambda x: obj(fov=x), fov, method='lm')
+    return res.x
 
 
 def compare_image(image, fov_error):
@@ -85,7 +89,18 @@ def compare_image(image, fov_error):
             print("Camera0 reprojection_error > ref camera for frame id: %s" %
                   image_id)
 
-        # if fov_error:
+        if fov_error:
+            fov_err = np.radians((param["horizontal-fov"] * 1.09,
+                                  param["vertical-fov"] * .99))
+            intrinsic, permute = intrinsic_and_permute(fov_err)
+            ret, ypr, t = solve_pose_epnp(points, intrinsic, permute)
+
+            camera1_err = sad(obj_f(points, t, np.array(ypr), fov_err))
+
+            print("fov: %s" % np.degrees(fov))
+            print("fov_err: %s" % np.degrees(fov_err))
+            print("fov_min: %s" % np.degrees(
+                optimize_fov(points, t, np.array(ypr), fov_err)))
 
     else:
         print("Failed to solve pose for frame id: %d" % image_id)
