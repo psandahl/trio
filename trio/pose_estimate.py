@@ -64,6 +64,14 @@ def optimize_position(points, position, orientation, fov):
     return res.x
 
 
+def optimize_orientation(points, position, orientation, fov):
+    obj = functools.partial(obj_f, points, position=position, fov=fov)
+
+    res = optimize.least_squares(
+        lambda x: obj(orientation=x), orientation, method='lm')
+    return res.x
+
+
 def ok_str(cond):
     if cond:
         return "OK"
@@ -135,9 +143,23 @@ def compare_image(image, fov_error):
             # With new fov, try search for better position.
             opt_fov = np.radians(opt_fov)
             opt_position = optimize_position(points, t, np.array(ypr), opt_fov)
-
             print("  Adjust position err from distance %.5fm to %.5fm" %
                   (linalg.norm(t - position), linalg.norm(opt_position - position)))
+
+            opt_orientation = optimize_orientation(
+                points, opt_position, ypr, opt_fov)
+            yaw, pitch, roll = (math.degrees(opt_orientation[0]),
+                                math.degrees(opt_orientation[1]),
+                                math.degrees(opt_orientation[2]))
+
+            yaw_diff, pitch_diff, roll_diff = angles_distance(yaw, param["yaw"],
+                                                              pitch, param["pitch"],
+                                                              roll, param["roll"])
+            print(" Differences in degrees after opt yaw/pitch/roll: %.6f/%.6f/%.6f - %s" %
+                  (yaw_diff, pitch_diff, roll_diff,
+                   ok_str(equal_angles(yaw, param["yaw"], pitch, param["pitch"],
+                                       roll, param["roll"]))
+                   ))
 
     else:
         print("Failed to solve pose for frame id: %d" % image_id)
