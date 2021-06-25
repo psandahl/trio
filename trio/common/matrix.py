@@ -119,6 +119,19 @@ def matrix_permute_ned():
                      0.0, 1.0, 0.0]).reshape(3, 3)
 
 
+def matrix_skew_symmetric(vec3):
+    """
+    Create a skew symmetric matrix from a 3d vector.
+    """
+    x, y, z = vec3
+    m = [
+        0, -z, y,
+        z, 0, -x,
+        -y, x, 0
+    ]
+    return np.array(m).reshape(3, 3)
+
+
 def matrix_decompose_camera(camera, permute):
     """
     Given camera and permute matrices decompose into ypr angles and translation.
