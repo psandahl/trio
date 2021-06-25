@@ -7,7 +7,8 @@ from trio.common.camera import Camera
 from trio.common.math import normalize, column, euclidean, homogeneous
 from trio.common.matrix import matrix_rank, matrix_ypr, \
     matrix_decompose_ypr, matrix_look_at, matrix_intrinsic, \
-    matrix_permute_ecef, matrix_decompose_camera, matrix_decompose_projection
+    matrix_permute_ecef, matrix_decompose_camera, matrix_decompose_projection, \
+    matrix_relative_rotation
 
 from .utils import equal_matrices, equal_arrays
 
@@ -146,6 +147,22 @@ class CommonMatrixTestCase(unittest.TestCase):
                                      np.array(decomp[0])))
         self.assertTrue(equal_arrays(np.array([1899.8, 3678, -8765.5]),
                                      decomp[1]))
+
+    def test_matrix_relative_rotation(self):
+        # Create some rotations.
+        rot0 = np.radians((12.22, 1, 123.5))
+        rot1 = np.radians((15.5, -3, 17.7))
+
+        r0 = matrix_ypr(rot0)
+        r1 = matrix_ypr(rot1)
+
+        # Get the relative rotation matrix.
+        rel = matrix_relative_rotation(r0, r1)
+
+        # Using the relative matrix create a matrix equal to r1.
+        r2 = rel @ r0
+
+        self.assertTrue(equal_matrices(r1, r2))
 
     def test_matrix_rank(self):
         # A matrix of zeros has rank zero.

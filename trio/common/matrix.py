@@ -132,6 +132,13 @@ def matrix_skew_symmetric(vec3):
     return np.array(m).reshape(3, 3)
 
 
+def matrix_relative_rotation(r0, r1):
+    """
+    Find the relative rotation to go from r0 to r1.
+    """
+    return r1 @ r0.T
+
+
 def matrix_decompose_camera(camera, permute):
     """
     Given camera and permute matrices decompose into ypr angles and translation.
