@@ -5,6 +5,7 @@ import json
 
 from .common.camera import Camera, Permutation, camera_from_param, \
     camera_fundamental_matrix
+from .common.linear import closest_point_on_line
 from .common.math import epipolar_line, plot_on_line
 
 image_width = 1280
@@ -61,18 +62,33 @@ def process_frames(frame0, frame1):
     for index in range(len(points)):
         point = points[index]
         color = colors[index]
+
+        # This is the 3d point projected in camera 0.
         uv0 = camera0.project(point)
-
-        l = epipolar_line(F, uv0)
-        start_line = (0, int(round(plot_on_line(l, 0))))
-        end_line = (image_width - 1,
-                    int(round(plot_on_line(l, image_width - 1))))
-        cv.line(display, start_line, end_line, color)
-
         cv.drawMarker(display, uv_to_int(uv0), color)
 
+        # This is the 3d point projected in camera 1.
         uv1 = camera1.project(point)
         cv.circle(display, uv_to_int(uv1), 5, color, 1, cv.LINE_AA)
+
+        # Calculate the epipolar line for camera 1 from the uv coordinate for
+        # camera 0.
+        line = epipolar_line(F, uv0)
+
+        # Plot the epipolar line.
+        start_line = (0, int(round(plot_on_line(line, 0))))
+        end_line = (image_width - 1,
+                    int(round(plot_on_line(line, image_width - 1))))
+        cv.line(display, start_line, end_line, color, 1, cv.LINE_AA)
+
+        # Find the closest point on the epipolar line for the uv from camera 1.
+        pt = closest_point_on_line(line, uv1)
+
+        # Draw a line between the point and the uv coordinate.
+        cv.line(display, uv_to_int(uv1), uv_to_int(pt), color, 1, cv.LINE_AA)
+
+        #print("Closest point on line: %s" % pt)
+        #cv.circle(display, uv_to_int(pt), 5, color, -1, cv.LINE_AA)
 
     return display
 

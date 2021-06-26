@@ -109,3 +109,30 @@ def solve_pose_epnp(points, intrinsic, permute):
         return (True, ypr, t)
     else:
         return (False, None, None)
+
+
+def closest_point_on_line(line, point):
+    """
+    Line is on form ax + by + c = 0. Find the closest point on line to the
+    provided point.
+    """
+    a, b, c = line
+    slope = a / -b  # Slope for the given line.
+
+    x, y = point
+
+    slope2 = 1.0 / -slope  # Slope for a perpendicular line.
+    c2 = y - slope2 * x  # y intercept for a perpendicular line through point.
+
+    A = np.array([
+        a, b,
+        slope2, -1.0
+    ]).reshape(2, 2)
+
+    b = np.array([
+        -c, -c2
+    ]).reshape(2, 1)
+
+    res = linalg.solve(A, b)
+
+    return res.flatten()
