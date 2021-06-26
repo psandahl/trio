@@ -3,7 +3,11 @@ import numpy as np
 
 import json
 
-from .common.camera import Camera, Permutation, camera_from_param
+from .common.camera import Camera, Permutation, camera_from_param, \
+    camera_fundamental_matrix
+from .common.math import epipolar_line, plot_on_line
+
+from .common.matrix import matrix_rank
 
 image_width = 1280
 image_height = 720
@@ -41,6 +45,8 @@ def uv_to_int(uv):
 
 
 def process_frames(frame0, frame1):
+    # print("frame0: %.3f frame1: %.3f" %
+    #      (frame0["confidence"], frame1["confidence"]))
     camera0 = camera_from_param(frame0["camera-parameters"],
                                 rect=np.array(
         [0., 0., image_width - 1, image_height - 1]),
@@ -51,6 +57,10 @@ def process_frames(frame0, frame1):
         [0., 0., image_width - 1, image_height - 1]),
         perm=Permutation.NED)
 
+    F = camera_fundamental_matrix(camera0, camera1)
+    #print("F:\n%s" % F)
+    print("rank(F): %d" % matrix_rank(F))
+
     display = np.zeros((image_height, image_width, 3), dtype=np.uint8)
 
     points = get_selected_points(frame0["point-correspondences"])
@@ -58,6 +68,16 @@ def process_frames(frame0, frame1):
         point = points[index]
         color = colors[index]
         uv0 = camera0.project(point)
+
+        l = epipolar_line(F, uv0)
+        start_line = (0, int(round(plot_on_line(l, 0))))
+        end_line = (1279, int(round(plot_on_line(l, 1279))))
+        cv.line(display, start_line, end_line, color)
+
+        print("epipolar line: %s" % l)
+        print("p(0): %f" % plot_on_line(l, 0))
+        print("p(1279): %f" % plot_on_line(l, 1279))
+
         cv.drawMarker(display, uv_to_int(uv0), color)
 
         uv1 = camera1.project(point)

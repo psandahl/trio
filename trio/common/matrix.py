@@ -139,6 +139,13 @@ def matrix_relative_rotation(r0, r1):
     return r1 @ r0.T
 
 
+def matrix_essential(r, t):
+    """
+    Get the essential matrix from rotation and translation.
+    """
+    return r @ matrix_skew_symmetric(t)
+
+
 def matrix_decompose_camera(camera, permute):
     """
     Given camera and permute matrices decompose into ypr angles and translation.
@@ -182,7 +189,7 @@ def matrix_rank(m):
     svals = svdvals(m)
     rank = 0
     for s in svals:
-        if s < 0.00001:
+        if s < 0.00000001:
             return rank
         else:
             rank += 1

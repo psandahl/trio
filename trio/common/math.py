@@ -65,3 +65,23 @@ def sad(xs):
     Sum the absolute of the values.
     """
     return reduce(lambda acc, x: acc + abs(x), xs, 0.0)
+
+
+def epipolar_line(F, p):
+    """
+    Get the epipolar line for a point. Line is on format ax + bx + c = 0.
+    """
+    a, b, c = F @ homogeneous(p)
+
+    # Normalize so that a ** 2 + b ** 2 is 1.
+    norm = math.sqrt(a ** 2 + b ** 2)
+
+    return np.array((a, b, c)) / norm
+
+
+def plot_on_line(l, x):
+    """
+    Plot the x on the line.
+    """
+    a, b, c = l
+    return (a * x + c) / -b

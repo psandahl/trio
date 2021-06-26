@@ -4,7 +4,7 @@ from scipy import linalg
 
 from .math import column, euclidean, homogeneous
 from .matrix import matrix_ypr, matrix_intrinsic, matrix_permute_ecef, \
-    matrix_permute_ned
+    matrix_permute_ned, matrix_essential, matrix_relative_rotation
 
 
 class Permutation(Enum):
@@ -44,8 +44,8 @@ class Camera:
             self.camera_matrix = np.hstack((r.T, t))
 
             # Create intrinsic matrix and put together the projection matrix.
-            intrinsic_matrix = matrix_intrinsic(fov, rect)
-            self.projection_matrix = intrinsic_matrix @ self.camera_matrix
+            self.intrinsic_matrix = matrix_intrinsic(fov, rect)
+            self.projection_matrix = self.intrinsic_matrix @ self.camera_matrix
 
         else:
             raise TypeError("Not the expected types to Camera")
@@ -102,3 +102,18 @@ def camera_reprojection_errors(points, camera):
         err.append(linalg.norm(uv1 - uv0))
 
     return err
+
+
+def camera_fundamental_matrix(camera0, camera1):
+    """
+    Create a fundamental matrix from camera0 to camera1.
+    """
+    r = matrix_relative_rotation(camera0.rotation_matrix(),
+                                 camera1.rotation_matrix())
+    t = camera0.camera_space(camera1.center_of_projection())
+    E = matrix_essential(r, t)
+
+    K0Inv = linalg.inv(camera0.intrinsic_matrix)
+    K1InvT = linalg.inv(camera1.intrinsic_matrix).T
+
+    return K1InvT @ E @ K0Inv
