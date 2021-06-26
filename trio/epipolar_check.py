@@ -162,6 +162,8 @@ def run_synthetic():
     image_height = 720
     height = 50.0
     at_points = [
+        np.array([6.0, 6.0, 0.0]),
+        np.array([5.0, 5.0, 0.0]),
         np.array([4.0, 4.0, 0.0]),
         np.array([3.0, 3.0, 0.0]),
         np.array([2.0, 2.0, 0.0]),
@@ -169,18 +171,29 @@ def run_synthetic():
         np.array([0.0, 0.0, 0.0])
     ]
     eye_points = [
+        np.array([84.0, 84.0, height]),
+        np.array([82.0, 82.0, height]),
         np.array([80.0, 80.0, height]),
         np.array([78.0, 78.0, height]),
         np.array([76.0, 76.0, height]),
         np.array([74.0, 74.0, height]),
         np.array([72.0, 72.0, height])
     ]
+    eye_points2 = [
+        np.array([84.0, 70.0, height]),
+        np.array([82.0, 70.0, height]),
+        np.array([80.0, 70.0, height]),
+        np.array([78.0, 70.0, height]),
+        np.array([76.0, 70.0, height]),
+        np.array([74.0, 70.0, height]),
+        np.array([72.0, 70.0, height])
+    ]
     ground_points = [
-        np.array([-10.0, -10.0, 10.0]),
+        np.array([-3.5, -7.0, 10.0]),
         np.array([10.0, -10.0, 6.0]),
         np.array([0.0, 0.0, 7.0]),
         np.array([-10.0, 10.0, 8.0]),
-        np.array([10.0, 10.0, 8.0]),
+        np.array([6.0, 5.0, 8.0]),
     ]
 
     up = np.array((0.0, 0.0, 1.0))
