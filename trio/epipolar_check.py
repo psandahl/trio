@@ -7,6 +7,7 @@ from .common.camera import Camera, Permutation, camera_from_param, \
     camera_fundamental_matrix
 from .common.linear import closest_point_on_line
 from .common.math import epipolar_line, plot_on_line
+from .common.matrix import matrix_look_at, matrix_decompose_ypr
 
 selected_uvs = [(0., 0.), (-.25, -.25), (.25, -.25), (-.25, .25), (.25, .25)]
 
@@ -133,5 +134,81 @@ def run(path, image_width=1280, image_height=720):
             spacing = 6
         elif key == 27 or key == ord('q'):
             break
+
+    cv.destroyAllWindows()
+
+
+def param_from_data(pos, ypr, fov):
+    param = dict()
+
+    x, y, z = pos
+    yaw, pitch, roll = ypr
+    h, v = fov
+
+    param["x"] = x
+    param["y"] = y
+    param["z"] = z
+    param["yaw"] = yaw
+    param["pitch"] = pitch
+    param["roll"] = roll
+    param["horizontal-fov"] = h
+    param["vertical-fov"] = v
+
+    return param
+
+
+def run_synthetic():
+    image_width = 1280
+    image_height = 720
+    height = 50.0
+    at_points = [
+        np.array([4.0, 4.0, 0.0]),
+        np.array([3.0, 3.0, 0.0]),
+        np.array([2.0, 2.0, 0.0]),
+        np.array([1.0, 1.0, 0.0]),
+        np.array([0.0, 0.0, 0.0])
+    ]
+    eye_points = [
+        np.array([80.0, 80.0, height]),
+        np.array([78.0, 78.0, height]),
+        np.array([76.0, 76.0, height]),
+        np.array([74.0, 74.0, height]),
+        np.array([72.0, 72.0, height])
+    ]
+    ground_points = [
+        np.array([-10.0, -10.0, 10.0]),
+        np.array([10.0, -10.0, 6.0]),
+        np.array([0.0, 0.0, 7.0]),
+        np.array([-10.0, 10.0, 8.0]),
+        np.array([10.0, 10.0, 8.0]),
+    ]
+
+    up = np.array((0.0, 0.0, 1.0))
+    fov = (30, 20)
+
+    cv.namedWindow("Epipolar Check")
+
+    for i in range(len(at_points) - 1):
+        ypr0 = np.degrees(matrix_decompose_ypr(
+            matrix_look_at(eye_points[i], at_points[i], up)))
+        param0 = param_from_data(eye_points[i], ypr0, fov)
+        camera0 = camera_from_param(param0,
+                                    rect=np.array(
+                                        [0., 0., image_width - 1, image_height - 1]),
+                                    perm=Permutation.ECEF)
+
+        ypr1 = np.degrees(matrix_decompose_ypr(
+            matrix_look_at(eye_points[i + 1], at_points[i + 1], up)))
+        param1 = param_from_data(eye_points[i + 1], ypr1, fov)
+        camera1 = camera_from_param(param1,
+                                    rect=np.array(
+                                        [0., 0., image_width - 1, image_height - 1]),
+                                    perm=Permutation.ECEF)
+
+        display = process_frames(
+            camera0, camera1, ground_points, image_width, image_height)
+
+        cv.imshow("Epipolar Check", display)
+        cv.waitKey(0)
 
     cv.destroyAllWindows()
