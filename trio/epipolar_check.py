@@ -8,9 +8,6 @@ from .common.camera import Camera, Permutation, camera_from_param, \
 from .common.linear import closest_point_on_line
 from .common.math import epipolar_line, plot_on_line
 
-image_width = 1280
-image_height = 720
-
 selected_uvs = [(0., 0.), (-.25, -.25), (.25, -.25), (-.25, .25), (.25, .25)]
 
 colors = [(255, 255, 255), (255, 255, 0),
@@ -43,22 +40,12 @@ def uv_to_int(uv):
     return (int(round(u)), int(round(v)))
 
 
-def process_frames(frame0, frame1):
-    camera0 = camera_from_param(frame0["camera-parameters"],
-                                rect=np.array(
-        [0., 0., image_width - 1, image_height - 1]),
-        perm=Permutation.NED)
-
-    camera1 = camera_from_param(frame1["camera-parameters"],
-                                rect=np.array(
-        [0., 0., image_width - 1, image_height - 1]),
-        perm=Permutation.NED)
+def process_frames(camera0, camera1, points, image_width, image_height):
 
     F = camera_fundamental_matrix(camera0, camera1)
 
     display = np.zeros((image_height, image_width, 3), dtype=np.uint8)
 
-    points = get_selected_points(frame0["point-correspondences"])
     for index in range(len(points)):
         point = points[index]
         color = colors[index]
@@ -93,7 +80,7 @@ def process_frames(frame0, frame1):
     return display
 
 
-def run(path):
+def run(path, image_width=1280, image_height=720):
     frames = obj_from_file(path)["images"]
 
     cv.namedWindow("Epipolar Check")
@@ -110,7 +97,21 @@ def run(path):
 
         #print("Quit using ESC or 'q' - any other key step one frame")
 
-        display = process_frames(frame0, frame1)
+        param0 = frame0["camera-parameters"]
+        param1 = frame1["camera-parameters"]
+        camera0 = camera_from_param(param0,
+                                    rect=np.array(
+                                        [0., 0., image_width - 1, image_height - 1]),
+                                    perm=Permutation.NED)
+
+        camera1 = camera_from_param(param1,
+                                    rect=np.array(
+                                        [0., 0., image_width - 1, image_height - 1]),
+                                    perm=Permutation.NED)
+        points = get_selected_points(frame0["point-correspondences"])
+
+        display = process_frames(
+            camera0, camera1, points, image_width, image_height)
         cv.imshow("Epipolar Check", display)
 
         key = cv.waitKey(0)
