@@ -17,6 +17,7 @@ class Permutation(Enum):
 
 class Camera:
 
+    intrinsic_matrix = np.zeros((3, 3), dtype='float')
     camera_matrix = np.zeros((3, 4), dtype='float')
     projection_matrix = np.zeros((3, 4), dtype='float')
 
@@ -43,8 +44,8 @@ class Camera:
             self.camera_matrix = np.hstack((r.T, t))
 
             # Create intrinsic matrix and put together the projection matrix.
-            i = matrix_intrinsic(fov, rect)
-            self.projection_matrix = i @ self.camera_matrix
+            intrinsic_matrix = matrix_intrinsic(fov, rect)
+            self.projection_matrix = intrinsic_matrix @ self.camera_matrix
 
         else:
             raise TypeError("Not the expected types to Camera")
@@ -63,6 +64,12 @@ class Camera:
         t = self.camera_matrix[:, 3:]
 
         return (r.T @ (t * -1.0)).flatten()
+
+    def rotation_matrix(self):
+        """
+        Get the camera's rotation matrix.
+        """
+        return self.camera_matrix[:, :3].T
 
     def project(self, xyz):
         """
