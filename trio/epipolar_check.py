@@ -7,7 +7,7 @@ from .common.camera import Camera, Permutation, camera_from_param, \
     camera_fundamental_matrix
 from .common.linear import closest_point_on_line
 from .common.math import epipolar_line, plot_on_line
-from .common.matrix import matrix_look_at, matrix_decompose_ypr
+from .common.matrix import matrix_look_at, matrix_decompose_ypr, matrix_ypr
 
 selected_uvs = [(0., 0.), (-.25, -.25), (.25, -.25), (-.25, .25), (.25, .25)]
 
@@ -75,8 +75,8 @@ def process_frames(camera0, camera1, points, image_width, image_height):
         # Draw a line between the point and the uv coordinate.
         cv.line(display, uv_to_int(uv1), uv_to_int(pt), color, 1, cv.LINE_AA)
 
-        #print("Closest point on line: %s" % pt)
-        #cv.circle(display, uv_to_int(pt), 5, color, -1, cv.LINE_AA)
+        # print("Closest point on line: %s" % pt)
+        # cv.circle(display, uv_to_int(pt), 5, color, -1, cv.LINE_AA)
 
     return display
 
@@ -96,7 +96,7 @@ def run(path, image_width=1280, image_height=720):
         print("Process frames '%d' and '%d'" %
               (frame0["image-id"], frame1["image-id"]))
 
-        #print("Quit using ESC or 'q' - any other key step one frame")
+        # print("Quit using ESC or 'q' - any other key step one frame")
 
         param0 = frame0["camera-parameters"]
         param1 = frame1["camera-parameters"]
@@ -155,6 +155,58 @@ def param_from_data(pos, ypr, fov):
     param["vertical-fov"] = v
 
     return param
+
+
+def run_stereo_normal():
+    image_width = 1280
+    image_height = 720
+    fov = (30, 20)
+
+    points = [
+        np.array([11.0, 0, 2.0]),
+        np.array([8.0, 0, 2.0]),
+        np.array([9.5, 0, 1.0]),
+        np.array([11.0, 0, 0.0]),
+        np.array([8.0, 0, 0.0])
+    ]
+
+    camera0 = Camera(np.array((10, 10, 1)), np.radians((-90, 0, 0)),
+                     np.radians(fov), rect=np.array(
+                         [0., 0., image_width - 1, image_height - 1]),
+                     perm=Permutation.ECEF)
+
+    camera1 = Camera(np.array((9, 10, 1)), np.radians((-95, 0, 0)),
+                     np.radians(fov), rect=np.array(
+                         [0., 0., image_width - 1, image_height - 1]),
+                     perm=Permutation.ECEF)
+
+    F = camera_fundamental_matrix(camera0, camera1)
+
+    print("F:\n%s" % F)
+
+    display = np.zeros((image_height, image_width, 3), dtype=np.uint8)
+    cv.namedWindow("Stereo Normal")
+
+    for i in range(len(points)):
+        uv0 = camera0.project(points[i])
+        cv.drawMarker(display, uv_to_int(uv0), colors[i])
+
+        line = epipolar_line(F, uv0)
+        print("line: %s" % line)
+
+        # Plot the epipolar line.
+        start_line = (0, int(round(plot_on_line(line, 0))))
+        end_line = (image_width - 1,
+                    int(round(plot_on_line(line, image_width - 1))))
+        cv.line(display, start_line, end_line, colors[i], 1, cv.LINE_AA)
+
+        uv1 = camera1.project(points[i])
+        cv.circle(display, uv_to_int(uv1), 5, colors[i], 1, cv.LINE_AA)
+
+    cv.imshow("Stereo Normal", display)
+    cv.waitKey(0)
+
+    cv.destroyAllWindows()
 
 
 def run_synthetic():
