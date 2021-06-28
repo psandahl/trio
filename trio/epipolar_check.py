@@ -164,9 +164,9 @@ def run_stereo_normal():
 
     points = [
         np.array([11.0, 0, 2.0]),
-        np.array([8.0, 0, 2.0]),
+        np.array([8.0, 0, 1.5]),
         np.array([9.5, 0, 1.0]),
-        np.array([11.0, 0, 0.0]),
+        np.array([11.0, 0, 0.5]),
         np.array([8.0, 0, 0.0])
     ]
 
@@ -175,7 +175,7 @@ def run_stereo_normal():
                          [0., 0., image_width - 1, image_height - 1]),
                      perm=Permutation.ECEF)
 
-    camera1 = Camera(np.array((9, 10, 1)), np.radians((-95, 0, 0)),
+    camera1 = Camera(np.array((9, 10, 1)), np.radians((-92, 0, 0)),
                      np.radians(fov), rect=np.array(
                          [0., 0., image_width - 1, image_height - 1]),
                      perm=Permutation.ECEF)
