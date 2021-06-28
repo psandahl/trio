@@ -64,19 +64,20 @@ def process_frames(camera0, camera1, points, image_width, image_height):
         line = epipolar_line(F, uv0)
 
         # Plot the epipolar line.
-        start_line = (0, int(round(plot_on_line(line, 0))))
-        end_line = (image_width - 1,
-                    int(round(plot_on_line(line, image_width - 1))))
+        start_line = uv_to_int((0, plot_on_line(line, 0)))
+        end_line = uv_to_int((image_width - 1,
+                              plot_on_line(line, image_width - 1)))
+
         cv.line(display, start_line, end_line, color, 1, cv.LINE_AA)
 
         # Find the closest point on the epipolar line for the uv from camera 1.
         pt = closest_point_on_line(line, uv1)
+        disp = np.linalg.norm(pt - uv1)
 
-        # Draw a line between the point and the uv coordinate.
-        cv.line(display, uv_to_int(uv1), uv_to_int(pt), color, 1, cv.LINE_AA)
-
-        # print("Closest point on line: %s" % pt)
-        # cv.circle(display, uv_to_int(pt), 5, color, -1, cv.LINE_AA)
+        if disp > 1.0:
+            # Draw a line between the point and the uv coordinate.
+            cv.line(display, uv_to_int(uv1),
+                    uv_to_int(pt), color, 1, cv.LINE_AA)
 
     return display
 
