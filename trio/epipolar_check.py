@@ -175,7 +175,7 @@ def run_stereo_normal():
                          [0., 0., image_width - 1, image_height - 1]),
                      perm=Permutation.ECEF)
 
-    camera1 = Camera(np.array((9, 10, 1)), np.radians((-92, 0, 0)),
+    camera1 = Camera(np.array((9, 9, 1)), np.radians((-88, 0, 0)),
                      np.radians(fov), rect=np.array(
                          [0., 0., image_width - 1, image_height - 1]),
                      perm=Permutation.ECEF)
@@ -191,6 +191,9 @@ def run_stereo_normal():
         uv0 = camera0.project(points[i])
         cv.drawMarker(display, uv_to_int(uv0), colors[i])
 
+        uv1 = camera1.project(points[i])
+        cv.circle(display, uv_to_int(uv1), 5, colors[i], 1, cv.LINE_AA)
+
         line = epipolar_line(F, uv0)
         print("line: %s" % line)
 
@@ -199,9 +202,6 @@ def run_stereo_normal():
         end_line = (image_width - 1,
                     int(round(plot_on_line(line, image_width - 1))))
         cv.line(display, start_line, end_line, colors[i], 1, cv.LINE_AA)
-
-        uv1 = camera1.project(points[i])
-        cv.circle(display, uv_to_int(uv1), 5, colors[i], 1, cv.LINE_AA)
 
     cv.imshow("Stereo Normal", display)
     cv.waitKey(0)

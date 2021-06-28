@@ -17,7 +17,8 @@ class Permutation(Enum):
 
 class Camera:
 
-    intrinsic_matrix = np.zeros((3, 3), dtype='float')
+    permute_matrix = np.eye(3, dtype='float')
+    intrinsic_matrix = np.zeros(3, dtype='float')
     camera_matrix = np.zeros((3, 4), dtype='float')
     projection_matrix = np.zeros((3, 4), dtype='float')
 
@@ -30,12 +31,12 @@ class Camera:
                 type(rect) == np.ndarray and rect.size == 4 and \
                 type(perm) == Permutation:
 
-            permute = matrix_permute_ecef()
+            self.permute_matrix = matrix_permute_ecef()
             if perm == Permutation.NED:
-                permute = matrix_permute_ned()
+                self.permute_matrix = matrix_permute_ned()
 
             # Create rotation matrix.
-            r = matrix_ypr(orientation) @ permute
+            r = matrix_ypr(orientation) @ self.permute_matrix
 
             # Create translation vector.
             t = r.T @ column(position * -1.0)
@@ -69,7 +70,7 @@ class Camera:
         """
         Get the camera's rotation matrix.
         """
-        return self.camera_matrix[:, :3].T
+        return self.camera_matrix[:, :3]
 
     def project(self, xyz):
         """
