@@ -7,6 +7,7 @@ from .common.camera import Camera, Permutation, camera_from_param, \
     camera_fundamental_matrix
 from .common.linear import closest_point_on_line, triangulate
 from .common.math import epipolar_line, plot_on_line
+from .common.matrix import matrix_rank
 
 selected_uvs = [(0., 0.), (-.25, -.25), (.25, -.25), (-.25, .25), (.25, .25)]
 
@@ -40,11 +41,22 @@ def uv_to_int(uv):
     return (int(round(u)), int(round(v)))
 
 
+def display_text(display, text, image_width):
+    text_size, baseline = cv.getTextSize(text, cv.FONT_HERSHEY_SIMPLEX, 0.7, 1)
+    text_x_start = int(image_width / 2 - text_size[0] / 2)
+    cv.putText(display, text, (text_x_start, 20),
+               cv.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255))
+
+
 def process_frames(camera0, camera1, points, image_width, image_height):
+    display = np.zeros((image_height, image_width, 3), dtype=np.uint8)
 
     F = camera_fundamental_matrix(camera0, camera1)
-
-    display = np.zeros((image_height, image_width, 3), dtype=np.uint8)
+    rank = matrix_rank(F)
+    if rank != 2:
+        text = "Error: Rank of F must be 2 but is {}".format(rank)
+        display_text(display, text, image_width)
+        return display
 
     max_line_err, max_tri_err = .0, .0
 
@@ -91,10 +103,7 @@ def process_frames(camera0, camera1, points, image_width, image_height):
 
     text = "Max epiline err: {:.5f}, max triangulation err: {:.3f}m".format(
         max_line_err, max_tri_err)
-    text_size, baseline = cv.getTextSize(text, cv.FONT_HERSHEY_SIMPLEX, 0.7, 1)
-    text_x_start = int(image_width / 2 - text_size[0] / 2)
-    cv.putText(display, text, (text_x_start, 20),
-               cv.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255))
+    display_text(display, text, image_width)
 
     return display
 
