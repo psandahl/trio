@@ -189,6 +189,28 @@ def run_stereo_normal():
     image_height = 720
     fov = (30, 20)
 
+    cam0 = [
+        (np.array((10, 10, 1)), np.radians((-90, 0, 0))),
+        (np.array((10, 10, 1)), np.radians((-90, 0, 0))),
+        (np.array((10, 10, 1)), np.radians((-90, 0, 0))),
+        (np.array((10, 10, 1)), np.radians((-90, 0, 0))),
+        (np.array((10, 10, 1)), np.radians((-95, 0, 0)))
+    ]
+    cam1 = [
+        (np.array((9, 10, 1)), np.radians((-90, 0, 0))),
+        (np.array((9, 9, 1)), np.radians((-90, 0, 0))),
+        (np.array((9, 11, 1)), np.radians((-90, 0, 0))),
+        (np.array((10, 9, 1)), np.radians((-90, 0, 0))),
+        (np.array((9, 10, 1)), np.radians((-85, 0, 0))),
+    ]
+    caption = [
+        "Stereo Normal",
+        "Right Front One Unit",
+        "Right Back One Unit",
+        "Right Ahead Of Left",
+        "Verging"
+    ]
+
     points = [
         np.array([11.0, 0, 2.0]),
         np.array([8.0, 0, 1.5]),
@@ -197,40 +219,56 @@ def run_stereo_normal():
         np.array([8.0, 0, 0.0])
     ]
 
-    camera0 = Camera(np.array((10, 10, 1)), np.radians((-90, 0, 0)),
-                     np.radians(fov), rect=np.array(
+    cv.namedWindow("Epipolar Demo")
+
+    mode = 0
+    while True:
+        camera0 = Camera(cam0[mode][0], cam0[mode][1],
+                         np.radians(fov), rect=np.array(
+            [0., 0., image_width - 1, image_height - 1]),
+            perm=Permutation.ECEF)
+
+        camera1 = Camera(cam1[mode][0], cam1[mode][1],
+                         np.radians(fov), rect=np.array(
                          [0., 0., image_width - 1, image_height - 1]),
-                     perm=Permutation.ECEF)
+                         perm=Permutation.ECEF)
 
-    camera1 = Camera(np.array((9, 9, 1)), np.radians((-88, 0, 0)),
-                     np.radians(fov), rect=np.array(
-                         [0., 0., image_width - 1, image_height - 1]),
-                     perm=Permutation.ECEF)
+        F = camera_fundamental_matrix(camera0, camera1)
 
-    F = camera_fundamental_matrix(camera0, camera1)
+        display = np.zeros((image_height, image_width, 3), dtype=np.uint8)
 
-    print("F:\n%s" % F)
+        for i in range(len(points)):
+            uv0 = camera0.project(points[i])
+            cv.drawMarker(display, uv_to_int(uv0), colors[i])
 
-    display = np.zeros((image_height, image_width, 3), dtype=np.uint8)
-    cv.namedWindow("Stereo Normal")
+            uv1 = camera1.project(points[i])
+            cv.circle(display, uv_to_int(uv1), 5, colors[i], 1, cv.LINE_AA)
 
-    for i in range(len(points)):
-        uv0 = camera0.project(points[i])
-        cv.drawMarker(display, uv_to_int(uv0), colors[i])
+            line = epipolar_line(F, uv0)
 
-        uv1 = camera1.project(points[i])
-        cv.circle(display, uv_to_int(uv1), 5, colors[i], 1, cv.LINE_AA)
+            # Plot the epipolar line.
+            start_line = (0, int(round(plot_on_line(line, 0))))
+            end_line = (image_width - 1,
+                        int(round(plot_on_line(line, image_width - 1))))
+            cv.line(display, start_line, end_line, colors[i], 1, cv.LINE_AA)
 
-        line = epipolar_line(F, uv0)
-        print("line: %s" % line)
+        display_text(display, caption[mode], image_width)
+        cv.imshow("Stereo Normal", display)
 
-        # Plot the epipolar line.
-        start_line = (0, int(round(plot_on_line(line, 0))))
-        end_line = (image_width - 1,
-                    int(round(plot_on_line(line, image_width - 1))))
-        cv.line(display, start_line, end_line, colors[i], 1, cv.LINE_AA)
-
-    cv.imshow("Stereo Normal", display)
-    cv.waitKey(0)
+        print("Press ESC or 'q' to quit")
+        print("Press '0' to x to set mode. Current mode is: %d" % mode)
+        key = cv.waitKey(0)
+        if key == ord('0'):
+            mode = 0
+        elif key == ord('1'):
+            mode = 1
+        elif key == ord('2'):
+            mode = 2
+        elif key == ord('3'):
+            mode = 3
+        elif key == ord('4'):
+            mode = 4
+        elif key == 27 or key == ord('q'):
+            break
 
     cv.destroyAllWindows()
