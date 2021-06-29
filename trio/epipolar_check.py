@@ -124,7 +124,7 @@ def run(path, image_width=1280, image_height=720):
               (frame0["image-id"], frame1["image-id"]))
 
         print("Quit using ESC or 'q' - SPACE or 'n' forward - 'p' backward")
-        print("'1' to '9' to set spacing. Current spacing: %d" % spacing)
+        print("'1' to 'f' to set spacing. Current spacing: %d" % spacing)
 
         param0 = frame0["camera-parameters"]
         param1 = frame1["camera-parameters"]
@@ -166,6 +166,18 @@ def run(path, image_width=1280, image_height=720):
             spacing = 8
         elif key == ord('9'):
             spacing = 9
+        elif key == ord('a'):
+            spacing = 10
+        elif key == ord('b'):
+            spacing = 11
+        elif key == ord('c'):
+            spacing = 12
+        elif key == ord('d'):
+            spacing = 13
+        elif key == ord('e'):
+            spacing = 14
+        elif key == ord('f'):
+            spacing = 15
         elif key == 27 or key == ord('q'):
             break
 
