@@ -253,7 +253,7 @@ def run_stereo_normal():
             cv.line(display, start_line, end_line, colors[i], 1, cv.LINE_AA)
 
         display_text(display, caption[mode], image_width)
-        cv.imshow("Stereo Normal", display)
+        cv.imshow("Epipolar Demo", display)
 
         print("Press ESC or 'q' to quit")
         print("Press '0' to x to set mode. Current mode is: %d" % mode)
