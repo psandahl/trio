@@ -3,6 +3,8 @@ import cv2 as cv
 
 import json
 
+from .image.utils import remove_symbols
+
 
 def eager_cap_read(cap):
     for n in range(50):
@@ -33,9 +35,12 @@ def run(video_path, meta_path):
             print("Failed to receive video image")
             break
 
-        cv.imshow("Player", image)
+        gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+        clean = remove_symbols(gray)
 
-        key = cv.waitKey(30)
+        cv.imshow("Player", clean)
+
+        key = cv.waitKey(0)
         if key == 27 or key == ord('q'):
             break
 

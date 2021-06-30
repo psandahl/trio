@@ -194,14 +194,14 @@ def run_stereo_normal():
         (np.array((10, 10, 1)), np.radians((-90, 0, 0))),
         (np.array((10, 10, 1)), np.radians((-90, 0, 0))),
         (np.array((10, 10, 1)), np.radians((-90, 0, 0))),
-        (np.array((10, 10, 1)), np.radians((-95, 0, 0)))
+        (np.array((10, 10, 1)), np.radians((-90, 0, 0)))
     ]
     cam1 = [
         (np.array((9, 10, 1)), np.radians((-90, 0, 0))),
         (np.array((9, 9, 1)), np.radians((-90, 0, 0))),
         (np.array((9, 11, 1)), np.radians((-90, 0, 0))),
         (np.array((10, 9, 1)), np.radians((-90, 0, 0))),
-        (np.array((9, 10, 1)), np.radians((-85, 0, 0))),
+        (np.array((9, 10, 1)), np.radians((-70, 0, 0))),
     ]
     caption = [
         "Stereo Normal",
