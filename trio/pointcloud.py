@@ -96,9 +96,52 @@ def display_epipolar_and_reprojection(F, entry0, entry1):
     cv.imshow("Epipolar and reprojection", display)
 
 
-def process_pair(entry0, entry1):
+def display_best_matches(entry0, entry1, matches, window):
+    display = cv.drawMatches(entry0["orig-image"],
+                             entry0["keypoints"],
+                             entry1["orig-image"],
+                             entry1["keypoints"],
+                             matches[:15], None,
+                             flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+    cv.imshow(window, display)
+
+
+def display_some_matches_with_epipolar(F, entry0, entry1, matches, window):
+    display = np.array(entry1["orig-image"])
+    image_width, image_height = image_width_and_height(display)
+    kpt1 = entry0["keypoints"]
+    kpt2 = entry1["keypoints"]
+    index = 0
+    for match in matches[:5]:
+        color = colors[index]
+        index += 1
+
+        uv0 = kpt1[match.queryIdx].pt
+        uv1 = kpt2[match.trainIdx].pt
+
+        # Calculate the epipolar line for uv0.
+        line = epipolar_line(F, np.array(uv0))
+
+        # Plot the epipolar line.
+        start_line = uv_to_int((0, plot_on_line(line, 0)))
+        end_line = uv_to_int((image_width - 1,
+                              plot_on_line(line, image_width - 1)))
+
+        cv.line(display, start_line, end_line, color, 1, cv.LINE_AA)
+
+        # Plot uv1 as cross.
+        cv.drawMarker(display, uv_to_int(uv1), color)
+
+    cv.imshow(window, display)
+
+
+def process_pair(entry0, entry1, matches):
     F = camera_fundamental_matrix(entry0["camera"], entry1["camera"])
     display_epipolar_and_reprojection(F, entry0, entry1)
+
+    display_best_matches(entry0, entry1, matches, "Sorted matches")
+    display_some_matches_with_epipolar(
+        F, entry0, entry1, matches, "Matched epipolar")
 
 
 def run(video_path, meta_path):
@@ -110,6 +153,8 @@ def run(video_path, meta_path):
         return
 
     cv.namedWindow("Epipolar and reprojection")
+    cv.namedWindow("Sorted matches")
+    cv.namedWindow("Matched epipolar")
 
     buffer = MatchingBuffer(30)
 
@@ -130,8 +175,8 @@ def run(video_path, meta_path):
         height, width, channels = image.shape
         camera = camera_from_param(frame["camera-parameters"],
                                    rect=np.array(
-                                       [0, 0, width - 1, height - 1]),
-                                   perm=Permutation.NED)
+            [0, 0, width - 1, height - 1]),
+            perm=Permutation.NED)
         points = get_selected_points(frame["point-correspondences"])
         confidence = frame["confidence"]
         buffer.push(image, camera, points, confidence)
@@ -139,8 +184,8 @@ def run(video_path, meta_path):
             print("Filling buffer")
             continue
 
-        entry0, entry1 = buffer.valid_pairing()
-        process_pair(entry0, entry1)
+        entry0, entry1, matches = buffer.valid_pairing()
+        process_pair(entry0, entry1, matches)
 
         key = cv.waitKey(0)
         if key == 27 or key == ord('q'):
