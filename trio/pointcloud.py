@@ -5,7 +5,7 @@ import json
 
 from .common.camera import Camera, Permutation, camera_from_param, \
     camera_fundamental_matrix
-from .common.linear import closest_point_on_line
+from .common.linear import closest_point_on_line, triangulate
 from .common.math import epipolar_line, plot_on_line
 from .image.matching_buffer import MatchingBuffer
 
@@ -102,7 +102,7 @@ def display_best_matches(entry0, entry1, matches, window):
                              entry0["keypoints"],
                              entry1["orig-image"],
                              entry1["keypoints"],
-                             matches[:15], None,
+                             matches, None,
                              flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
     cv.imshow(window, display)
 
@@ -139,11 +139,11 @@ def display_some_matches_with_epipolar(F, entry0, entry1, matches, window):
 def optimize_matches(F, entry0, entry1, matches, thres=0.5):
     optimized = []
 
-    kpt1 = entry0["keypoints"]
-    kpt2 = entry1["keypoints"]
+    kpt0 = entry0["keypoints"]
+    kpt1 = entry1["keypoints"]
     for match in matches:
-        uv0 = kpt1[match.queryIdx].pt
-        uv1 = kpt2[match.trainIdx].pt
+        uv0 = kpt0[match.queryIdx].pt
+        uv1 = kpt1[match.trainIdx].pt
 
         # Calculate the epipolar line for uv0.
         line = epipolar_line(F, np.array(uv0))
@@ -158,6 +158,36 @@ def optimize_matches(F, entry0, entry1, matches, thres=0.5):
     return optimized
 
 
+def triangulate_matches(entry0, entry1, matches):
+    camera0 = entry0["camera"]
+    camera1 = entry1["camera"]
+    kpt0 = entry0["keypoints"]
+    kpt1 = entry1["keypoints"]
+
+    points = []
+    for match in matches:
+        uv0 = np.array(kpt0[match.queryIdx].pt)
+        uv1 = np.array(kpt1[match.trainIdx].pt)
+
+        point = triangulate(camera0.projection_matrix, uv0,
+                            camera1.projection_matrix, uv1)
+        points.append(point)
+
+    return points
+
+
+def reproject_points(entry, points, window):
+    display = np.array(entry["orig-image"])
+    camera = entry["camera"]
+
+    for point in points:
+        uv = camera.project(point).flatten()
+        print(uv)
+        cv.drawMarker(display, uv_to_int(uv), (0, 255, 0))
+
+    cv.imshow(window, display)
+
+
 def process_pair(entry0, entry1, matches):
     F = camera_fundamental_matrix(entry0["camera"], entry1["camera"])
     display_epipolar_and_reprojection(F, entry0, entry1)
@@ -169,6 +199,9 @@ def process_pair(entry0, entry1, matches):
     display_best_matches(entry0, entry1, optimized, "Sorted matches")
     display_some_matches_with_epipolar(
         F, entry0, entry1, optimized, "Matched epipolar")
+
+    points = triangulate_matches(entry0, entry1, optimized)
+    reproject_points(entry0, points, "Frame points")
 
 
 def run(video_path, meta_path):
@@ -182,6 +215,7 @@ def run(video_path, meta_path):
     cv.namedWindow("Epipolar and reprojection")
     cv.namedWindow("Sorted matches")
     cv.namedWindow("Matched epipolar")
+    cv.namedWindow("Frame points")
 
     buffer = MatchingBuffer(30)
 
