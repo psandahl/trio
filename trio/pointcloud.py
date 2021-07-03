@@ -136,7 +136,7 @@ def display_some_matches_with_epipolar(F, entry0, entry1, matches, window):
     cv.imshow(window, display)
 
 
-def optimize_matches(F, entry0, entry1, matches, thres=0.5):
+def optimize_matches(F, entry0, entry1, matches, thres):
     optimized = []
 
     kpt0 = entry0["keypoints"]
@@ -182,19 +182,16 @@ def reproject_points(entry, points, window):
 
     for point in points:
         uv = camera.project(point).flatten()
-        print(uv)
         cv.drawMarker(display, uv_to_int(uv), (0, 255, 0))
 
     cv.imshow(window, display)
 
 
-def process_pair(entry0, entry1, matches):
+def process_pair(entry0, entry1, matches, thres):
     F = camera_fundamental_matrix(entry0["camera"], entry1["camera"])
     display_epipolar_and_reprojection(F, entry0, entry1)
 
-    optimized = optimize_matches(F, entry0, entry1, matches)
-    print("len(matches): %d" % len(matches))
-    print("len(optimized): %d" % len(optimized))
+    optimized = optimize_matches(F, entry0, entry1, matches, thres)
 
     display_best_matches(entry0, entry1, optimized, "Sorted matches")
     display_some_matches_with_epipolar(
@@ -203,8 +200,10 @@ def process_pair(entry0, entry1, matches):
     points = triangulate_matches(entry0, entry1, optimized)
     reproject_points(entry0, points, "Frame points")
 
+    return points
 
-def run(video_path, meta_path):
+
+def run(video_path, meta_path, buffer_width=30, thres=0.5):
     frames = obj_from_file(meta_path)["images"]
 
     cap = cv.VideoCapture(video_path)
@@ -217,7 +216,7 @@ def run(video_path, meta_path):
     cv.namedWindow("Matched epipolar")
     cv.namedWindow("Frame points")
 
-    buffer = MatchingBuffer(30)
+    matching_buffer = MatchingBuffer(buffer_width)
 
     index = 0
     while True:
@@ -240,15 +239,15 @@ def run(video_path, meta_path):
             perm=Permutation.NED)
         points = get_selected_points(frame["point-correspondences"])
         confidence = frame["confidence"]
-        buffer.push(image, camera, points, confidence)
-        if not buffer.has_valid_pairing():
+        matching_buffer.push(image, camera, points, confidence)
+        if not matching_buffer.has_valid_pairing():
             print("Filling buffer")
             continue
 
-        entry0, entry1, matches = buffer.valid_pairing()
-        process_pair(entry0, entry1, matches)
+        entry0, entry1, matches = matching_buffer.valid_pairing()
+        process_pair(entry0, entry1, matches, thres)
 
-        key = cv.waitKey(0)
+        key = cv.waitKey(1)
         if key == 27 or key == ord('q'):
             break
 
