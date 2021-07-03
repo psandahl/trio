@@ -1,5 +1,6 @@
 import numpy as np
 import cv2 as cv
+import open3d
 
 import json
 
@@ -171,7 +172,7 @@ def triangulate_matches(entry0, entry1, matches, point_set):
 
         point = triangulate(camera0.projection_matrix, uv0,
                             camera1.projection_matrix, uv1)
-        point_set.add(point)
+        point_set.add(point.flatten())  # ?!?
 
 
 def reproject_points(entry, points, window):
@@ -215,9 +216,6 @@ def run(video_path, meta_path, point_dist=0.5, buffer_width=30, epi_thres=0.5):
     matching_buffer = MatchingBuffer(buffer_width)
     point_set = PointSet(point_dist)
 
-    print(len(point_set.points))
-    print("???")
-
     index = 0
     while True:
         if index == len(frames):
@@ -246,7 +244,7 @@ def run(video_path, meta_path, point_dist=0.5, buffer_width=30, epi_thres=0.5):
 
         entry0, entry1, matches = matching_buffer.valid_pairing()
         process_pair(entry0, entry1, matches, epi_thres, point_set)
-        print(len(point_set.points))
+        print("Points captured: %d" % len(point_set.points))
 
         key = cv.waitKey(1)
         if key == 27 or key == ord('q'):
@@ -254,3 +252,9 @@ def run(video_path, meta_path, point_dist=0.5, buffer_width=30, epi_thres=0.5):
 
     cap.release()
     cv.destroyAllWindows()
+
+    print("Preparing point cloud ...")
+
+    open3d_points = open3d.utility.Vector3dVector(np.array(point_set.points))
+    pcd = open3d.geometry.PointCloud(open3d_points)
+    open3d.visualization.draw_geometries([pcd])
