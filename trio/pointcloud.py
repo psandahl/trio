@@ -7,6 +7,7 @@ from .common.camera import Camera, Permutation, camera_from_param, \
     camera_fundamental_matrix
 from .common.linear import closest_point_on_line, triangulate
 from .common.math import epipolar_line, plot_on_line
+from .common.point_set import PointSet
 from .image.matching_buffer import MatchingBuffer
 
 selected_uvs = [(0., 0.), (-.25, -.25), (.25, -.25), (-.25, .25), (.25, .25)]
@@ -136,7 +137,7 @@ def display_some_matches_with_epipolar(F, entry0, entry1, matches, window):
     cv.imshow(window, display)
 
 
-def optimize_matches(F, entry0, entry1, matches, thres):
+def optimize_matches(F, entry0, entry1, matches, epi_thres):
     optimized = []
 
     kpt0 = entry0["keypoints"]
@@ -152,28 +153,25 @@ def optimize_matches(F, entry0, entry1, matches, thres):
         pt = closest_point_on_line(line, uv1)
 
         err = np.linalg.norm(np.array(uv1) - pt)
-        if err < thres:
+        if err < epi_thres:
             optimized.append(match)
 
     return optimized
 
 
-def triangulate_matches(entry0, entry1, matches):
+def triangulate_matches(entry0, entry1, matches, point_set):
     camera0 = entry0["camera"]
     camera1 = entry1["camera"]
     kpt0 = entry0["keypoints"]
     kpt1 = entry1["keypoints"]
 
-    points = []
     for match in matches:
         uv0 = np.array(kpt0[match.queryIdx].pt)
         uv1 = np.array(kpt1[match.trainIdx].pt)
 
         point = triangulate(camera0.projection_matrix, uv0,
                             camera1.projection_matrix, uv1)
-        points.append(point)
-
-    return points
+        point_set.add(point)
 
 
 def reproject_points(entry, points, window):
@@ -187,23 +185,21 @@ def reproject_points(entry, points, window):
     cv.imshow(window, display)
 
 
-def process_pair(entry0, entry1, matches, thres):
+def process_pair(entry0, entry1, matches, epi_thres, point_set):
     F = camera_fundamental_matrix(entry0["camera"], entry1["camera"])
     display_epipolar_and_reprojection(F, entry0, entry1)
 
-    optimized = optimize_matches(F, entry0, entry1, matches, thres)
+    optimized = optimize_matches(F, entry0, entry1, matches, epi_thres)
 
     display_best_matches(entry0, entry1, optimized, "Sorted matches")
     display_some_matches_with_epipolar(
         F, entry0, entry1, optimized, "Matched epipolar")
 
-    points = triangulate_matches(entry0, entry1, optimized)
-    reproject_points(entry0, points, "Frame points")
-
-    return points
+    triangulate_matches(entry0, entry1, optimized, point_set)
+    #reproject_points(entry0, point_set.points, "All points")
 
 
-def run(video_path, meta_path, buffer_width=30, thres=0.5):
+def run(video_path, meta_path, point_dist=0.5, buffer_width=30, epi_thres=0.5):
     frames = obj_from_file(meta_path)["images"]
 
     cap = cv.VideoCapture(video_path)
@@ -214,9 +210,13 @@ def run(video_path, meta_path, buffer_width=30, thres=0.5):
     cv.namedWindow("Epipolar and reprojection")
     cv.namedWindow("Sorted matches")
     cv.namedWindow("Matched epipolar")
-    cv.namedWindow("Frame points")
+    #cv.namedWindow("All points")
 
     matching_buffer = MatchingBuffer(buffer_width)
+    point_set = PointSet(point_dist)
+
+    print(len(point_set.points))
+    print("???")
 
     index = 0
     while True:
@@ -245,7 +245,8 @@ def run(video_path, meta_path, buffer_width=30, thres=0.5):
             continue
 
         entry0, entry1, matches = matching_buffer.valid_pairing()
-        process_pair(entry0, entry1, matches, thres)
+        process_pair(entry0, entry1, matches, epi_thres, point_set)
+        print(len(point_set.points))
 
         key = cv.waitKey(1)
         if key == 27 or key == ord('q'):
