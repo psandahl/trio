@@ -14,6 +14,10 @@ class PointSet:
         if not self.contains(p):
             self.points.append(p)
 
+    def add_list(self, ps):
+        for p in ps:
+            self.add(p)
+
     def contains(self, p):
         for point in self.points:
             x, y, z = p - point

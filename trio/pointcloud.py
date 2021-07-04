@@ -166,13 +166,17 @@ def triangulate_matches(entry0, entry1, matches, point_set):
     kpt0 = entry0["keypoints"]
     kpt1 = entry1["keypoints"]
 
+    points = []
+
     for match in matches:
         uv0 = np.array(kpt0[match.queryIdx].pt)
         uv1 = np.array(kpt1[match.trainIdx].pt)
 
         point = triangulate(camera0.projection_matrix, uv0,
                             camera1.projection_matrix, uv1)
-        point_set.add(point.flatten())  # ?!?
+        points.append(point.flatten())
+
+    return points
 
 
 def reproject_points(entry, points, window):
@@ -196,11 +200,14 @@ def process_pair(entry0, entry1, matches, epi_thres, point_set):
     display_some_matches_with_epipolar(
         F, entry0, entry1, optimized, "Matched epipolar")
 
-    triangulate_matches(entry0, entry1, optimized, point_set)
-    #reproject_points(entry0, point_set.points, "All points")
+    points = triangulate_matches(entry0, entry1, optimized, point_set)
+    reproject_points(entry0, points, "Frame points")
+
+    point_set.add_list(points)
 
 
-def run(video_path, meta_path, point_dist=0.5, buffer_width=30, epi_thres=0.5):
+def run(video_path, meta_path, save_path,
+        point_dist=0.5, buffer_width=30, epi_thres=0.5):
     frames = obj_from_file(meta_path)["images"]
 
     cap = cv.VideoCapture(video_path)
@@ -211,7 +218,7 @@ def run(video_path, meta_path, point_dist=0.5, buffer_width=30, epi_thres=0.5):
     cv.namedWindow("Epipolar and reprojection")
     cv.namedWindow("Sorted matches")
     cv.namedWindow("Matched epipolar")
-    #cv.namedWindow("All points")
+    cv.namedWindow("Frame points")
 
     matching_buffer = MatchingBuffer(buffer_width)
     point_set = PointSet(point_dist)
@@ -244,7 +251,8 @@ def run(video_path, meta_path, point_dist=0.5, buffer_width=30, epi_thres=0.5):
 
         entry0, entry1, matches = matching_buffer.valid_pairing()
         process_pair(entry0, entry1, matches, epi_thres, point_set)
-        print("Points captured: %d" % len(point_set.points))
+        print("Frame index: %d. Points captured: %d" %
+              (index, len(point_set.points)))
 
         key = cv.waitKey(1)
         if key == 27 or key == ord('q'):
@@ -257,4 +265,6 @@ def run(video_path, meta_path, point_dist=0.5, buffer_width=30, epi_thres=0.5):
 
     open3d_points = open3d.utility.Vector3dVector(np.array(point_set.points))
     pcd = open3d.geometry.PointCloud(open3d_points)
-    open3d.visualization.draw_geometries([pcd])
+    open3d.io.write_point_cloud(save_path, pcd)
+
+    # open3d.visualization.draw_geometries([pcd])
